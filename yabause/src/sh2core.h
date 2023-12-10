@@ -308,6 +308,8 @@ typedef struct
    u16 RTCNT;  // 0xFFFFFFF4
    u16 RTCOR;  // 0xFFFFFFF8
    cache_enty cache;
+   u32 CHCR0M;
+   u32 WTCSRM;   // 0xFFFFFE80 mirror
 } Onchip_struct;
 
 typedef struct
@@ -373,6 +375,17 @@ typedef struct
    u64 count;
 } tilInfo_struct;
 
+typedef struct {
+  u32 * CHCR;
+  u32 * SAR;
+  u32 * DAR;
+  u32 * TCR;
+  u32 * CHCRM;
+  u32 * VCRDMA;
+  int copy_clock;
+} Dmac;
+
+
 typedef struct
 {
    sh2regs_struct regs;
@@ -432,6 +445,9 @@ typedef struct
    u32 pchistory_index;
 #endif
 
+   Dmac dma_ch0;
+   Dmac dma_ch1;
+   u32 pre_cycle;
    void * ext;  
 
 } SH2_struct;

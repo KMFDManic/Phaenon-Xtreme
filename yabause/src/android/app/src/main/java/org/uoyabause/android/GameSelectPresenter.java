@@ -42,7 +42,6 @@ import androidx.appcompat.view.ContextThemeWrapper;
 import android.view.View;
 import android.widget.CheckBox;
 
-import com.crashlytics.android.Crashlytics;
 import com.firebase.ui.auth.AuthUI;
 import com.firebase.ui.auth.ErrorCodes;
 import com.firebase.ui.auth.IdpResponse;
@@ -50,6 +49,8 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -64,8 +65,12 @@ import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.Observer;
+import io.reactivex.Single;
+import io.reactivex.SingleEmitter;
+import io.reactivex.SingleOnSubscribe;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.observers.DisposableSingleObserver;
 import io.reactivex.schedulers.Schedulers;
 
 public class GameSelectPresenter {
@@ -142,6 +147,7 @@ public class GameSelectPresenter {
 
 
     public void signIn() {
+
         target_.startActivityForResult(
                 AuthUI.getInstance()
                         .createSignInIntentBuilder()
@@ -151,6 +157,39 @@ public class GameSelectPresenter {
                         .build(),
                 GameSelectPresenter.RC_SIGN_IN);
     }
+
+
+    SingleEmitter<FirebaseUser> auth_emitter_;
+    public void signIn( DisposableSingleObserver<FirebaseUser> singleObserver ) {
+
+
+        Single.create( new SingleOnSubscribe<FirebaseUser>() {
+            @Override
+            public void subscribe(SingleEmitter<FirebaseUser> emitter) throws Exception {
+
+                auth_emitter_ = null;
+                FirebaseAuth auth = FirebaseAuth.getInstance();
+                FirebaseUser user = auth.getCurrentUser();
+                if (user != null) {
+                    emitter.onSuccess(user);
+                    return;
+                }
+                auth_emitter_ = emitter;
+                target_.startActivityForResult(
+                        AuthUI.getInstance()
+                                .createSignInIntentBuilder()
+                                .setAvailableProviders( Arrays.asList(/*new AuthUI.IdpConfig.Builder(AuthUI.TWITTER_PROVIDER).build(),
+                                            new AuthUI.IdpConfig.Builder(AuthUI.FACEBOOK_PROVIDER).build(),*/
+                                        new AuthUI.IdpConfig.GoogleBuilder().build()))
+                                .build(),
+                        GameSelectPresenter.RC_SIGN_IN);
+            }
+        })
+        .subscribeOn(AndroidSchedulers.mainThread())
+        .observeOn(AndroidSchedulers.mainThread())
+        .subscribe(singleObserver);
+    }
+
 
     public void signOut() {
         AuthUI.getInstance()
@@ -187,7 +226,7 @@ public class GameSelectPresenter {
 
             baseref.child(baseurl).child("android_token").setValue(token);
 
-            Crashlytics.setUserIdentifier( username_ + "_" + auth.getCurrentUser().getEmail());
+            FirebaseCrashlytics.getInstance().setUserId(username_ + "_" + auth.getCurrentUser().getEmail());
             mFirebaseAnalytics.setUserId(username_ + "_" + auth.getCurrentUser().getEmail());
             mFirebaseAnalytics.setUserProperty ("name", username_ + "_" + auth.getCurrentUser().getEmail());
 
@@ -206,13 +245,21 @@ public class GameSelectPresenter {
             //startActivity(SignedInActivity.createIntent(this, response));
             YabauseApplication application = (YabauseApplication)target_.getActivity().getApplication();
             if( application != null ) {
-                Crashlytics crash = application.getCrashlytics();
-                crash.setUserName(auth.getCurrentUser().getDisplayName());
-                crash.setUserEmail(auth.getCurrentUser().getEmail());
-                crash.setUserIdentifier(auth.getUid());
+                FirebaseCrashlytics.getInstance().setUserId( auth.getCurrentUser().getDisplayName() + "_" + auth.getCurrentUser().getEmail());
             }
+
+            if( auth_emitter_ != null ){
+                auth_emitter_.onSuccess(auth.getCurrentUser());
+                auth_emitter_ = null;
+            }
+
             return;
         } else {
+
+            if( auth_emitter_ != null ){
+                auth_emitter_.onError( new Throwable("Sigin in failed"));
+                auth_emitter_ = null;
+            }
 
             username_ = null;
             photo_url_ = null;
@@ -233,7 +280,14 @@ public class GameSelectPresenter {
                 listener_.onShowMessage(R.string.unknown_error);
                 return;
             }
+
         }
+
+        if( auth_emitter_ != null ){
+            auth_emitter_.onError( new Throwable("Sigin in failed"));
+            auth_emitter_ = null;
+        }
+
         listener_.onShowMessage(R.string.unknown_sign_in_response);
 
     }
@@ -265,7 +319,7 @@ public class GameSelectPresenter {
         if( do_not_ask == true ){
             FirebaseAuth auth = FirebaseAuth.getInstance();
             if (auth.getCurrentUser() != null) {
-                Crashlytics.setUserIdentifier( auth.getCurrentUser().getDisplayName() + "_" + auth.getCurrentUser().getEmail());
+                FirebaseCrashlytics.getInstance().setUserId( auth.getCurrentUser().getDisplayName() + "_" + auth.getCurrentUser().getEmail());
                 mFirebaseAnalytics.setUserId(auth.getCurrentUser().getDisplayName() + "_" + auth.getCurrentUser().getEmail());
                 mFirebaseAnalytics.setUserProperty ("name", auth.getCurrentUser().getDisplayName() + "_" + auth.getCurrentUser().getEmail());
             }
@@ -296,7 +350,7 @@ public class GameSelectPresenter {
                                     AuthUI.getInstance()
                                             .createSignInIntentBuilder()
                                             .setTheme(R.style.Theme_AppCompat)
-                                            .setPrivacyPolicyUrl("http://www.uoyabause.org/static_pages/privacy_policy")
+                                            .setPrivacyPolicyUrl("https://www.uoyabause.org/static_pages/privacy_policy")
                                             .setAvailableProviders(Arrays.asList(new AuthUI.IdpConfig.GoogleBuilder().build()))
                                             .build(),
                                     RC_SIGN_IN);
@@ -317,7 +371,7 @@ public class GameSelectPresenter {
 
             builder.create().show();
         }else{
-            Crashlytics.setUserIdentifier( auth.getCurrentUser().getDisplayName() + "_" + auth.getCurrentUser().getEmail());
+            FirebaseCrashlytics.getInstance().setUserId( auth.getCurrentUser().getDisplayName() + "_" + auth.getCurrentUser().getEmail());
             mFirebaseAnalytics.setUserId(auth.getCurrentUser().getDisplayName() + "_" + auth.getCurrentUser().getEmail());
             mFirebaseAnalytics.setUserProperty ("name", auth.getCurrentUser().getDisplayName() + "_" + auth.getCurrentUser().getEmail());
         }

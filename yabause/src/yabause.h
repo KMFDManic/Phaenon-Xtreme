@@ -57,6 +57,7 @@ typedef struct
    int cdcoretype;
    int carttype;
    u8 regionid;
+   int syslanguageid;
    const char *biospath;
    const char *cdpath;
    const char *ssfpath;
@@ -85,6 +86,7 @@ typedef struct
    int scsp_sync_count_per_frame;
    int scsp_main_mode;
    u32 sync_shift;
+   const char *playRecordPath;
 } yabauseinit_struct;
 
 #define CLKTYPE_26MHZ           0
@@ -166,6 +168,13 @@ int VideoSetSetting(int type, int value);
 
 int yprintf( const char * fmt, ... );
 
+
+int YabauseThread_IsUseBios();
+const char * YabauseThread_getBackupPath();
+void YabauseThread_setUseBios(int use);
+void YabauseThread_setBackupPath(const char * buf);
+void YabauseThread_coldBoot();
+void YabauseThread_resetPlaymode();
 
 #ifdef __cplusplus
 }

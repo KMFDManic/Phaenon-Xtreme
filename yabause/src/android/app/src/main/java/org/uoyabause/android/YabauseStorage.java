@@ -112,6 +112,7 @@ public class YabauseStorage {
     private File cartridge;
     private File state;
     private File screenshots;
+    private File record;
     private File external = null;
 
     private ObservableEmitter<String> progress_emitter = null;
@@ -142,6 +143,9 @@ public class YabauseStorage {
         
         screenshots = new File(yabroot, "screenshots");
         if (! screenshots.exists()) screenshots.mkdir();
+
+        record = new File(yabroot, "record");
+        if (! record.exists()) record.mkdir();
 
     }
 
@@ -232,8 +236,12 @@ public class YabauseStorage {
     
     public String getStateSavePath() {
         return state + File.separator;
-    }   
-    
+    }
+
+    public String getRecordPath() {
+        return record + File.separator;
+    }
+
     public String getScreenshotPath() {
         return screenshots + File.separator;
     }
@@ -258,11 +266,11 @@ public class YabauseStorage {
 
         Date lastupdate = GameStatus.getLastUpdate();
         if( lastupdate == null){
-            urlstr = "http://www.uoyabause.org/api/games/get_status_from/?date=20010101";
+            urlstr = "https://www.uoyabause.org/api/games/get_status_from/?date=20010101";
         }else{
             SimpleDateFormat f = new SimpleDateFormat("yyyy/MM/dd'T'HH:mm:ss");
             String date_string = f.format(lastupdate);
-            urlstr = "http://www.uoyabause.org/api/games/get_status_from/?date=" + date_string;
+            urlstr = "https://www.uoyabause.org/api/games/get_status_from/?date=" + date_string;
         }
 
         Context ctx = YabauseApplication.getAppContext();

@@ -19,6 +19,7 @@
 	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 #include "UIYabause.h"
+#include "debug.h"
 #include "../Settings.h"
 #include "../VolatileSettings.h"
 #include "UISettings.h"
@@ -40,6 +41,8 @@
 #include "../YabauseGL.h"
 #include "../QtYabause.h"
 #include "../CommonDialogs.h"
+
+#include "PlayRecorder.h"
 
 #include <QKeyEvent>
 #include <QTextEdit>
@@ -181,7 +184,12 @@ UIYabause::UIYabause( QWidget* parent )
 
 	mIsCdIn = true;
 
+  PlayRecorder * p = PlayRecorder::getInstance();
+  using std::placeholders::_1;
+  p->f_takeScreenshot = std::bind(&UIYabause::takeScreenshot, this, _1);
+
 	// Initialize cloud service
+	std::thread t([&]{
     firebase::AppOptions options;
     options.set_app_id("1:749919523054:android:3a92de2bc803c4bf");
     options.set_api_key("AIzaSyAAqH_-n3Q42YAyVJvF-0nCvjLBaUa79-A");
@@ -190,6 +198,8 @@ UIYabause::UIYabause( QWidget* parent )
     options.set_storage_bucket("uoyabause.appspot.com");
     options.set_project_id("uoyabause");
     app = firebase::App::Create(options);	
+	});
+	t.detach();
 
 }
 
@@ -837,6 +847,7 @@ void UIYabause::on_aFileSettings_triggered()
          newhash["Advanced/68kCore"] != hash["Advanced/68kCore"] ||
 			newhash["General/CdRom"]!=hash["General/CdRom"] ||
 			newhash["General/CdRomISO"]!=hash["General/CdRomISO"] ||
+		        newhash["General/SystemLanguageID"]!=hash["General/SystemLanguageID"] ||
 			newhash["General/ClockSync"]!=hash["General/ClockSync"] ||
 			newhash["General/FixedBaseTime"]!=hash["General/FixedBaseTime"]
 		)
@@ -1080,8 +1091,21 @@ void UIYabause::on_aFileLoadStateAs_triggered()
 		aEmulationRun->trigger();
 }
 
+void UIYabause::takeScreenshot(const char * fname) {
+  YabauseLocker locker(mYabauseThread);
+  QImage screenshot = mYabauseGL->grabFrameBuffer();
+  QImageWriter iw(fname);
+  iw.write(screenshot);
+}
+
 void UIYabause::on_aFileScreenshot_triggered()
 {
+  PlayRecorder * p = PlayRecorder::getInstance();
+  if (p->getStatus() == 0) {
+    p->takeShot();
+    return;
+  }
+  
 	YabauseLocker locker( mYabauseThread );
 	// images filter that qt can write
 	QStringList filters;
@@ -1131,6 +1155,50 @@ void UIYabause::on_aEmulationRun_triggered()
 		if (isFullScreen())
 			hideMouseTimer->start(3 * 1000);
 	}
+}
+
+void UIYabause::on_actionRecord_triggered() {
+
+  PlayRecorder * p = PlayRecorder::getInstance();
+  if (p->getStatus() == -1) {
+    using std::placeholders::_1;
+    p->f_takeScreenshot = std::bind(&UIYabause::takeScreenshot, this, _1);
+    p->startRocord();
+    default_title = windowTitle();
+    setWindowTitle("Recording");
+    this->actionRecord->setText("Stop Record");
+
+  }
+  else if (p->getStatus() == 0) {
+    p->stopRocord();
+    setWindowTitle(default_title);
+    this->actionRecord->setText("Record");
+  }
+
+}
+
+void UIYabause::on_actionPlay_triggered() {
+  PlayRecorder * p = PlayRecorder::getInstance();
+  if (p->getStatus() == -1) {
+    using std::placeholders::_1;
+    p->f_takeScreenshot = std::bind(&UIYabause::takeScreenshot, this, _1);
+		QString s = QFileDialog::getExistingDirectory(
+    this, 
+    tr("Choose a location of your record"),
+    NULL,
+    QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog);		
+
+    if (!s.isEmpty()) {
+      QByteArray ba = s.toLocal8Bit();
+      p->startPlay(ba.data(), true, nullptr);
+      default_title = windowTitle();
+      setWindowTitle("Playing");
+    }
+  }
+  else if (p->getStatus() == 1) {
+    //p->stopRocord();
+  }
+    
 }
 
 void UIYabause::on_aEmulationPause_triggered()

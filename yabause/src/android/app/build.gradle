@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
 apply plugin: 'com.android.application'
-apply plugin: 'io.fabric'
+apply plugin: 'com.google.firebase.crashlytics'
 
 
 android {
@@ -59,15 +59,15 @@ android {
     }
 
     compileSdkVersion 29
-    buildToolsVersion '29.0.2'
+    buildToolsVersion '29.0.3'
 
     defaultConfig {
         applicationId "org.uoyabause.uranus"
         minSdkVersion 21
         targetSdkVersion 29
         multiDexEnabled true
-        versionCode 118
-        versionName '3.1.0'
+        versionCode 147
+        versionName '3.4.2'
         multiDexEnabled true
         vectorDrawables.useSupportLibrary = true
         signingConfig signingConfigs.pro
@@ -100,6 +100,11 @@ android {
             applicationVariants.all { variant ->
                 renameAPK(variant, defaultConfig, 'R')
             }
+            firebaseCrashlytics {
+                nativeSymbolUploadEnabled true
+                strippedNativeLibsDir  'src/main/jniLibs'
+                unstrippedNativeLibsDir  'src/main/jniLibs'
+            }
             resValue "string", "app_name", "Yaba Sanshiro"
         }
         pro {
@@ -112,6 +117,12 @@ android {
             applicationVariants.all { variant ->
                 renameAPK(variant, defaultConfig, 'P')
             }
+            firebaseCrashlytics {
+                nativeSymbolUploadEnabled true
+                strippedNativeLibsDir  'src/main/jniLibs'
+                unstrippedNativeLibsDir  'src/main/jniLibs'
+            }
+
         }
         debug {
             debuggable true
@@ -122,6 +133,12 @@ android {
             packagingOptions {
                 doNotStrip "**/*/*.so"
             }
+            firebaseCrashlytics {
+                nativeSymbolUploadEnabled true
+                strippedNativeLibsDir  'src/main/jniLibs'
+                unstrippedNativeLibsDir  'src/main/jniLibs'
+            }
+
         }
     }
 
@@ -137,12 +154,12 @@ android {
 */
 }
 
-crashlytics {
-    enableNdk true
-    androidNdkOut 'src/main/jniLibs'
-    androidNdkLibsOut 'src/main/jniLibs'
-    manifestPath 'src/main/AndroidManifest.xml'
-}
+//crashlytics {
+//    enableNdk true
+//    androidNdkOut 'src/main/jniLibs'
+//    androidNdkLibsOut 'src/main/jniLibs'
+//    manifestPath 'src/main/AndroidManifest.xml'
+//}
 
 def renameAPK(variant, defaultConfig, buildType) {
     variant.outputs.all {
@@ -196,33 +213,34 @@ dependencies {
     implementation 'androidx.tvprovider:tvprovider:1.0.0'
 
     implementation 'com.firebaseui:firebase-ui-auth:6.2.0'
-    implementation 'com.google.firebase:firebase-core:17.2.1'
-    implementation 'com.google.firebase:firebase-database:19.2.0'
-    implementation 'com.google.firebase:firebase-storage:19.1.0'
-    implementation 'com.google.firebase:firebase-ads:18.3.0'
-    implementation 'com.google.firebase:firebase-messaging:20.1.0'
-    implementation 'com.google.firebase:firebase-config:19.1.0'
+    implementation 'com.google.firebase:firebase-core:17.4.2'
+    implementation 'com.google.firebase:firebase-database:19.3.0'
+    implementation 'com.google.firebase:firebase-storage:19.1.1'
+    implementation 'com.google.firebase:firebase-ads:19.1.0'
+    implementation 'com.google.firebase:firebase-messaging:20.2.0'
+    implementation 'com.google.firebase:firebase-config:19.1.4'
     implementation 'com.google.android.gms:play-services-analytics:17.0.0'
-    implementation 'com.michaelpardo:activeandroid:3.1.0-SNAPSHOT'
+    //implementation 'com.michaelpardo:activeandroid:3.1.0-SNAPSHOT'
+    implementation files('libs/activeandroid-3.1.0-SNAPSHOT.jar')
     implementation 'com.github.bumptech.glide:glide:4.9.0'
     implementation 'commons-io:commons-io:2.5'
     implementation 'org.jbundle.util.osgi.wrapped:org.jbundle.util.osgi.wrapped.org.apache.http.client:4.1.2'
     implementation 'com.squareup.okhttp3:okhttp:3.10.0'
     implementation 'com.google.code.gson:gson:2.8.5'
     implementation 'androidx.multidex:multidex:2.0.1'
-    implementation 'com.crashlytics.sdk.android:crashlytics:2.10.1'
-    implementation 'com.crashlytics.sdk.android:crashlytics-ndk:2.1.1'
+    implementation 'com.google.firebase:firebase-analytics-ktx:17.4.4'
+    implementation 'com.google.firebase:firebase-crashlytics-ndk:17.1.1'
     implementation 'net.cattaka:adapter-toolbox:0.5.2'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'net.nend.android:nend-sdk:5.2.0'
-    implementation "com.google.android.material:material:1.2.0-alpha03"
+    implementation "com.google.android.material:material:1.2.0-beta01"
 
     // Add the In-App Messaging dependency:
-    implementation 'com.google.firebase:firebase-inappmessaging-display:19.0.2'
+    implementation 'com.google.firebase:firebase-inappmessaging-display:19.0.7'
     implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
     implementation 'io.reactivex.rxjava2:rxjava:2.2.6'
 
-    def preference_version = "1.1.0"
+    def preference_version = "1.1.1"
 
     // Java
     implementation "androidx.preference:preference:$preference_version"
@@ -240,6 +258,30 @@ dependencies {
 
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+}
+
+configurations {
+  ktlint
+}
+
+dependencies {
+  ktlint "com.github.shyiko:ktlint:0.29.0"
+}
+
+task ktlint(type: JavaExec, group: "verification") {
+  description = "Check Kotlin code style."
+  classpath = configurations.ktlint
+  main = "com.github.shyiko.ktlint.Main"
+  args "src/**/*.kt"
+}
+
+check.dependsOn ktlint
+
+task ktlintFormat(type: JavaExec, group: "formatting") {
+ description = "Fix Kotlin code style deviations."
+ classpath = configurations.ktlint
+ main = "com.github.shyiko.ktlint.Main"
+ args "-F", "src/**/*.kt"
 }
 
 // ADD THIS AT THE BOTTOM

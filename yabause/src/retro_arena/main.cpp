@@ -26,8 +26,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#if GCC_VERSION < 9
 #include <experimental/filesystem>
-namespace fs = std::experimental::filesystem ;
+namespace fs = std::experimental::filesystem;
+#else
+#include <filesystem>
+namespace fs = std::filesystem;
+#endif
 
 #include <sys/resource.h>
 #include <errno.h>
@@ -71,6 +76,8 @@ char s_savepath[256] ="\0";
 
 extern "C" {
 static char biospath[256] = "/home/pigaming/RetroPie/BIOS/saturn/bios.bin";
+static char strgsyslangeid[256] = "english";
+static int syslanguageid = 0;
 static char cdpath[256] = ""; ///home/pigaming/RetroPie/roms/saturn/nights.cue";
 //static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/gd.cue";
 //static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/Virtua Fighter Kids (1996)(Sega)(JP).ccd";
@@ -78,6 +85,11 @@ static char buppath[256] = "./back.bin";
 static char mpegpath[256] = "\0";
 static char cartpath[256] = "\0";
 static bool menu_show = false;
+
+char* toLower(char* s) {
+  for(char *p=s; *p; p++) *p=tolower(*p);
+  return s;
+}
 
 #define LOG printf
 
@@ -221,6 +233,7 @@ int yabauseinit()
   yinit.cdcoretype = CDCORE_ISO;
   yinit.carttype = CART_DRAM32MBIT;
   yinit.regionid = 0;
+  yinit.syslanguageid = syslanguageid;
   if( g_emulated_bios ){
     yinit.biospath = NULL;
   }else{
@@ -297,6 +310,7 @@ int main(int argc, char** argv)
     if( all_args[0] == "-h" || all_args[0] == "--h" ){
       printf("Usage:\n");
       printf("  -b STRING  --bios STRING                 bios file\n");
+      printf("  -l STRING  --language STRING             english, deutsch, french, spanish,\n                                           italian, japanese\n");
       printf("  -i STRING  --iso STRING                  iso/cue file\n");
       printf("  -r NUMBER  --resolution_mode NUMBER      0 .. Native, 1 .. 4x, 2 .. 2x, 3 .. Original\n");
       printf("  -a         --keep_aspect_rate\n");
@@ -312,6 +326,15 @@ int main(int argc, char** argv)
 		if(( x == "-b" || x == "--bios") && (i+1<all_args.size() ) ) {
       g_emulated_bios = 0;
       strncpy(biospath, all_args[i+1].c_str(), 256);
+    }
+	  	else if(( x == "-l" || x == "--language") && (i+1<all_args.size() ) ) {
+      strncpy(strgsyslangeid, all_args[i+1].c_str(), 256);
+	  if (toLower(strgsyslangeid) == "english") { syslanguageid = 0; }
+	  if (toLower(strgsyslangeid) == "deutsch") { syslanguageid = 1; }
+	  if (toLower(strgsyslangeid) == "french") { syslanguageid = 2; }
+	  if (toLower(strgsyslangeid) == "spanish") { syslanguageid = 3; }
+	  if (toLower(strgsyslangeid) == "italian") { syslanguageid = 4; }
+	  if (toLower(strgsyslangeid) == "japanese") { syslanguageid = 5; }
     }
 		else if(( x == "-i" || x == "--iso") && (i+1<all_args.size() ) ) {
       strncpy(cdpath, all_args[i+1].c_str(), 256);
@@ -603,7 +626,7 @@ int main(int argc, char** argv)
         usleep( 16*1000 );
       }
     }else{
-      //printf("\033[%d;%dH Frmae = %d \n", 0, 0, frame_cont);
+      //printf("Frmae = %d \n", 0, 0, frame_cont);
       //frame_cont++;
       YabauseExec(); // exec one frame
     }
@@ -755,4 +778,45 @@ FINISH:
     if(bufRGB) free(bufRGB);
     if(row_pointers) free(row_pointers);
     return rtn;
+}
+
+extern "C" {
+
+  int YabauseThread_IsUseBios() {
+    //if( s_biospath == NULL){
+    //    return 1;
+    //}
+    return 0;
+
+  }
+
+  const char * YabauseThread_getBackupPath() {
+    //return s_buppath;
+    return NULL;
+  }
+
+  void YabauseThread_setUseBios(int use) {
+
+
+  }
+
+  char tmpbakcup[256];
+  void YabauseThread_setBackupPath( const char * buf) {
+      //strcpy(tmpbakcup,buf);
+      //s_buppath = tmpbakcup;
+  }
+
+  void YabauseThread_resetPlaymode() {
+      //if( s_playrecord_path != NULL ){
+      //    free(s_playrecord_path);
+      //    s_playrecord_path = NULL;
+      //}
+      //s_buppath = GetMemoryPath();
+  }
+
+  void YabauseThread_coldBoot() {
+    //YabauseDeInit();
+    //YabauseInit();
+    //YabauseReset();
+  }
 }

@@ -93,7 +93,7 @@
             android:value="org.uoyabause.android.GameInfo, org.uoyabause.android.GameStatus, org.uoyabause.android.Cheat" />
         <meta-data
             android:name="firebase_crashlytics_collection_enabled"
-            android:value="false" />
+            android:value="true" />
 
         <activity
             android:name="org.uoyabause.android.tv.GameSelectActivity"
@@ -114,7 +114,7 @@
             </intent-filter>
                         android:process=":emulationmain"
                         android:theme="@style/Theme.Gameselect.Leanback"
-
+            android:process=":emulationmain"
         </activity>
         -->
         <activity android:name="org.uoyabause.android.YabauseGameSelectActivity" />
@@ -203,18 +203,22 @@
             android:theme="@style/AppTheme.Launcher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-
                 <category android:name="android.intent.category.DEFAULT" />
-
                 <data
                     android:host="@string/host"
                     android:scheme="@string/schema" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="yabasanshiro"/>
             </intent-filter>
         </activity>
 

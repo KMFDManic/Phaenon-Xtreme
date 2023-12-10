@@ -102,14 +102,15 @@ class GameSelectActivityPhone : AppCompatActivity(), NendAdListener {
         if (frg_ != null) {
             frg_!!.onConfigurationChanged(newConfig)
         }
-        //mDrawerToggle.onConfigurationChanged(newConfig);
+        // mDrawerToggle.onConfigurationChanged(newConfig);
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean { // Pass the event to ActionBarDrawerToggle, if it returns
 // true, then it has handled the app icon touch event
-//if (mDrawerToggle.onOptionsItemSelected(item)) {
+// if (mDrawerToggle.onOptionsItemSelected(item)) {
 //    return true;
-//}
+// }
+
         if (frg_ != null) {
             val rtn = frg_!!.onOptionsItemSelected(item)
             if (rtn == true) {
@@ -119,7 +120,7 @@ class GameSelectActivityPhone : AppCompatActivity(), NendAdListener {
         return super.onOptionsItemSelected(item)
     }
 
-    override fun onFailedToReceiveAd(nendAdView: NendAdView) { //Toast.makeText(getApplicationContext(), "onFailedToReceiveAd", Toast.LENGTH_LONG).show();
+    override fun onFailedToReceiveAd(nendAdView: NendAdView) { // Toast.makeText(getApplicationContext(), "onFailedToReceiveAd", Toast.LENGTH_LONG).show();
         val nendError = nendAdView.nendError
         when (nendError) {
             NendAdView.NendError.INVALID_RESPONSE_TYPE -> {
@@ -136,18 +137,18 @@ class GameSelectActivityPhone : AppCompatActivity(), NendAdListener {
         Log.e("nend", nendError.message)
     }
 
-    override fun onReceiveAd(nendAdView: NendAdView) { //Toast.makeText(getApplicationContext(), "onReceiveAd", Toast.LENGTH_LONG).show();
+    override fun onReceiveAd(nendAdView: NendAdView) { // Toast.makeText(getApplicationContext(), "onReceiveAd", Toast.LENGTH_LONG).show();
         nendAdView.bringToFront()
         nendAdView.invalidate()
     }
 
-    override fun onClick(nendAdView: NendAdView) { //Toast.makeText(getApplicationContext(), "onClick", Toast.LENGTH_LONG).show();
+    override fun onClick(nendAdView: NendAdView) { // Toast.makeText(getApplicationContext(), "onClick", Toast.LENGTH_LONG).show();
     }
 
-    override fun onDismissScreen(nendAdView: NendAdView) { //Toast.makeText(getApplicationContext(), "onDismissScreen", Toast.LENGTH_LONG).show();
+    override fun onDismissScreen(nendAdView: NendAdView) { // Toast.makeText(getApplicationContext(), "onDismissScreen", Toast.LENGTH_LONG).show();
     }
 
     companion object {
-        private const val CONTENT_VIEW_ID = 10101010
+        const val CONTENT_VIEW_ID = 10101010
     }
 }

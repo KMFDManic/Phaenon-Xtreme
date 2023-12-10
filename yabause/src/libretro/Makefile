@@ -52,7 +52,7 @@ endif
 
 CORE_DIR := .
 
-TARGET_NAME = km_phaenon_xtreme_amped
+TARGET_NAME = km_phaenon_xtreme
 CC_AS ?= $(CC)
 
 # Unix
@@ -98,20 +98,6 @@ else ifeq ($(platform), arm64)
 	HAVE_SSE = 0
 	USE_AARCH64_DRC = 1
 	DYNAREC_DEVMIYAX = 1
-
-# Generic AArch64 Cortex-A53 support with GLES 3.0 like Amlogic G12A or Allwinner H616 
-else ifneq (,$(findstring arm64_cortex_a53_gles3,$(platform)))
-	override platform += unix
-	TARGET := $(TARGET_NAME)_libretro.so
-	fpic := -fPIC
-	SHARED := -shared -Wl,--no-undefined -Wl,--version-script=link.T
-	LDFLAGS += -lpthread
-	ARCH_IS_LINUX = 1
-	HAVE_SSE = 0
-	FORCE_GLES = 1
-	USE_AARCH64_DRC = 1
-	DYNAREC_DEVMIYAX = 1
-	FLAGS += -DAARCH64 -march=armv8-a+crc+fp+simd -mcpu=cortex-a53 -mtune=cortex-a53
 
 # Amlogic S922X Odroid-N2 / A311D Khadas VIM3 (AMLG12B) - 32-bit userspace
 else ifneq (,$(findstring AMLG12B,$(platform)))
@@ -161,35 +147,7 @@ else ifneq (,$(findstring rockpro64,$(platform)))
 	DYNAREC_DEVMIYAX = 1
 	FLAGS += -march=armv8-a+crc -mcpu=cortex-a72 -mtune=cortex-a72.cortex-a53 -mfloat-abi=hard -mfpu=neon-vfpv4 -mvectorize-with-neon-quad
 
-# Rpi4 (64-bit)
-else ifeq ($(platform), rpi4)
-	override platform += unix
-	TARGET := $(TARGET_NAME)_libretro.so
-	fpic := -fPIC
-	SHARED := -shared -Wl,--no-undefined -Wl,--version-script=link.T
-	LDFLAGS += -lpthread
-	FLAGS += -DAARCH64
-	ARCH_IS_LINUX = 1
-	HAVE_SSE = 0
-	FORCE_GLES = 1
-	USE_AARCH64_DRC = 1
-	DYNAREC_DEVMIYAX = 1
-	FLAGS += -mcpu=cortex-a72 -mtune=cortex-a72
-
 # ODROIDs
-else ifneq (,$(findstring odroid-c4,$(platform)))
-	override platform += unix
-	TARGET := $(TARGET_NAME)_libretro.so
-	fpic := -fPIC
-	SHARED := -shared -Wl,--no-undefined -Wl,--version-script=link.T
-	LDFLAGS += -lpthread
-	ARCH_IS_LINUX = 1
-	HAVE_SSE = 0
-	FORCE_GLES = 1
-	USE_AARCH64_DRC = 1
-	DYNAREC_DEVMIYAX = 1
-	FLAGS += -DAARCH64 -march=armv8-a+crc+fp+simd -mcpu=cortex-a55 -mtune=cortex-a55
-
 else ifeq ($(platform), odroid-n2)
 	override platform += unix
 	TARGET := $(TARGET_NAME)_libretro.so
@@ -370,7 +328,6 @@ ifeq ($(DEBUG), 1)
 	FLAGS += -O0 -g
 else
 	FLAGS += -O3 -DNDEBUG
-        FLAGS += -fno-tree-tail-merge #workaround segfault on N2 and possibly other ARM boards
 endif
 
 OBJECTS += $(OBJECTS_C) $(OBJECTS_CXX) $(OBJECTS_S)

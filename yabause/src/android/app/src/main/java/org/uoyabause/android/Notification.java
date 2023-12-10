@@ -1,22 +1,21 @@
-/*  Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+/*  Copyright 2017 devMiyax(smiyaxdev@gmail.com)
 
-    This file is part of YabaSanshiro.
+    This file is part of Yabause.
 
-    YabaSanshiro is free software; you can redistribute it and/or modify
+    Yabause is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
     (at your option) any later version.
 
-    YabaSanshiro is distributed in the hope that it will be useful,
+    Yabause is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with YabaSanshiro; if not, write to the Free Software
+    along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
-
 
 package org.uoyabause.android;
 import android.app.NotificationManager;
@@ -30,16 +29,16 @@ import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.media.RingtoneManager;
 import android.net.Uri;
-import androidx.core.app.NotificationCompat;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 import org.uoyabause.android.tv.GameSelectActivity;
-import org.uoyabause.uranus.R;
 
 import java.util.Map;
 
@@ -50,31 +49,21 @@ public class Notification extends FirebaseMessagingService{
 
     private static final String TAG = "uoyabause.Notification";
 
-    @Override
-    public void onNewToken(String token) {
-
-    }
-
     public void showVersionUpNOtification(RemoteMessage remoteMessage){
 
         //https://play.google.com/store/apps/details?id=org.uoyabause.android
 
-        Map<String,String> val = remoteMessage.getData();
-
         Intent googlePlayIntent = new Intent(Intent.ACTION_VIEW);
-        googlePlayIntent.setData(Uri.parse("market://details?id=org.uoyabause.uranus"));
+        googlePlayIntent.setData(Uri.parse("market://details?id=org.uoyabause.android"));
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 , googlePlayIntent,
                 PendingIntent.FLAG_ONE_SHOT);
-
-        String message = val.get("message");
 
         Uri defaultSoundUri= RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         NotificationCompat.Builder mBuilder =
                 new NotificationCompat.Builder(this)
-                        .setSmallIcon(R.drawable.ic_stat_ss_one)
-                        .setContentTitle(getString(R.string.new_version_available))
-                        .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
-                        .setContentText(message)
+                        .setSmallIcon(R.drawable.icon)
+                        .setContentTitle("new uoYabause is available")
+                        .setContentText( remoteMessage.getNotification().getBody() )
                         .setSound(defaultSoundUri)
                         .setContentIntent(pendingIntent)
                         .setAutoCancel(false)
@@ -84,7 +73,7 @@ public class Notification extends FirebaseMessagingService{
         UiModeManager uiModeManager = (UiModeManager) getSystemService(UI_MODE_SERVICE);
         if (uiModeManager.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION) {
             Resources r = getResources();
-            Bitmap image = BitmapFactory.decodeResource(r, R.drawable.banner);
+            Bitmap image = BitmapFactory.decodeResource(r,R.drawable.banner);
             mBuilder.setCategory(android.app.Notification.CATEGORY_RECOMMENDATION)
                     .setLargeIcon(image)
                     .setLocalOnly(true)
@@ -106,7 +95,7 @@ public class Notification extends FirebaseMessagingService{
         super.onMessageReceived(remoteMessage);
 
         Log.d(TAG, "From: " + remoteMessage.getFrom());
-        //Log.d(TAG, "Notification Message Body: " + remoteMessage.getNotification().getBody());
+        Log.d(TAG, "Notification Message Body: " + remoteMessage.getNotification().getBody());
 
         Map<String,String> val = remoteMessage.getData();
 
@@ -119,11 +108,14 @@ public class Notification extends FirebaseMessagingService{
         }catch( Exception e){
 
         }
-
         sentversion = val.get("version");
+
         // Version up Information
         if( sentversion != null  ){
-            showVersionUpNOtification(remoteMessage);
+
+            if( Integer.parseInt(sentversion) != CurrentVersion ) {
+                showVersionUpNOtification(remoteMessage);
+            }
             return;
         }
 
@@ -135,7 +127,7 @@ public class Notification extends FirebaseMessagingService{
         Uri defaultSoundUri= RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         NotificationCompat.Builder mBuilder =
                 new NotificationCompat.Builder(this)
-                        .setSmallIcon(R.drawable.ic_stat_ss_one)
+                        .setSmallIcon(R.drawable.icon)
                         .setContentTitle("uoYabause")
                         .setContentText( remoteMessage.getNotification().getBody() )
                         .setAutoCancel(true)

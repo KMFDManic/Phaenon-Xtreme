@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>640</width>
+    <height>480</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -123,8 +123,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
-     <height>22</height>
+     <width>640</width>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="mFile">
@@ -139,8 +139,6 @@
       <iconset resource="../resources/resources.qrc">
        <normaloff>:/actions/icons/actions/save_state.png</normaloff>:/actions/icons/actions/save_state.png</iconset>
      </property>
-     <addaction name="actionTo_Cloud"/>
-     <addaction name="separator"/>
      <addaction name="aFileSaveStateAs"/>
      <addaction name="separator"/>
      <addaction name="aFileSaveState0"/>
@@ -162,8 +160,6 @@
       <iconset resource="../resources/resources.qrc">
        <normaloff>:/actions/icons/actions/load_state.png</normaloff>:/actions/icons/actions/load_state.png</iconset>
      </property>
-     <addaction name="actionFrom_Cloud"/>
-     <addaction name="separator"/>
      <addaction name="aFileLoadStateAs"/>
      <addaction name="separator"/>
      <addaction name="aFileLoadState0"/>
@@ -248,7 +244,6 @@
     <property name="title">
      <string>&amp;Tools</string>
     </property>
-    <addaction name="actionOpen_web_interface"/>
     <addaction name="aToolsBackupManager"/>
     <addaction name="aToolsCheatsList"/>
     <addaction name="aToolsCheatSearch"/>
@@ -263,8 +258,6 @@
     <addaction name="aEmulationReset"/>
     <addaction name="separator"/>
     <addaction name="aEmulationFrameSkipLimiter"/>
-    <addaction name="actionRecord"/>
-    <addaction name="actionPlay"/>
    </widget>
    <addaction name="mFile"/>
    <addaction name="mEmulation"/>
@@ -417,7 +410,7 @@
     <string>Sc&amp;reenshot</string>
    </property>
    <property name="shortcut">
-    <string>F8</string>
+    <string>Ctrl+P</string>
    </property>
   </action>
   <action name="aEmulationFrameSkipLimiter">
@@ -1003,52 +996,6 @@
    </property>
    <property name="toolTip">
     <string>Donate</string>
-   </property>
-  </action>
-  <action name="actionOpen_web_interface">
-   <property name="icon">
-    <iconset resource="../resources/resources.qrc">
-     <normaloff>:/actions/verified_user.png</normaloff>:/actions/verified_user.png</iconset>
-   </property>
-   <property name="text">
-    <string>Sign In/Out</string>
-   </property>
-   <property name="statusTip">
-    <string>https://uoyabause.firebaseapp.com/</string>
-   </property>
-  </action>
-  <action name="actionTo_Cloud">
-   <property name="icon">
-    <iconset resource="../resources/resources.qrc">
-     <normaloff>:/actions/cloud_upload.png</normaloff>:/actions/cloud_upload.png</iconset>
-   </property>
-   <property name="text">
-    <string>To Cloud</string>
-   </property>
-   <property name="shortcut">
-    <string>Shift+F9</string>
-   </property>
-  </action>
-  <action name="actionFrom_Cloud">
-   <property name="icon">
-    <iconset resource="../resources/resources.qrc">
-     <normaloff>:/actions/cloud_download.png</normaloff>:/actions/cloud_download.png</iconset>
-   </property>
-   <property name="text">
-    <string>From Cloud</string>
-   </property>
-   <property name="shortcut">
-    <string>Shift+F5</string>
-   </property>
-  </action>
-  <action name="actionRecord">
-   <property name="text">
-    <string>Record</string>
-   </property>
-  </action>
-  <action name="actionPlay">
-   <property name="text">
-    <string>Play</string>
    </property>
   </action>
  </widget>

@@ -17,25 +17,6 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
-/*
-        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
-
-This file is part of YabaSanshiro.
-
-        YabaSanshiro is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-YabaSanshiro is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-        You should have received a copy of the GNU General Public License
-along with YabaSanshiro; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-*/
 
 /*! \file cs2.c
     \brief A-bus CS2 emulation functions. Mainly CD-Block code.
@@ -132,11 +113,6 @@ static INLINE void Cs2SetIRQ(u32 irq){
     ScuSendExternalInterrupt00();
   }
 }
-
-//Cs2SetDelayIRQ(u32 timing, u32 irq) {
-//  Cs2Area->delay_irq[Cs2Area->irq_index].time = timing;
-//  Cs2Area->delay_irq[Cs2Area->irq_index].irq = irq;
-//}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -818,7 +794,7 @@ void Cs2Reset(void) {
   Cs2Area->reg.CR3 = ('L'<<8) | 'O';
   Cs2Area->reg.CR4 = ('C'<<8) | 'K';
   Cs2Area->reg.HIRQ = 0xFFFF;
-  Cs2Area->reg.HIRQMASK = 0x0000;
+  Cs2Area->reg.HIRQMASK = 0xFFFF;
 
   Cs2Area->playFAD = 0xFFFFFFFF;
   Cs2Area->playendFAD = 0xFFFFFFFF;
@@ -884,7 +860,6 @@ void Cs2Reset(void) {
   Cs2Area->_statustiming = 1000000;
   Cs2Area->_periodiccycles = 0;
   Cs2Area->_commandtiming = 0;
-  Cs2Area->_command_execlock = 0;
   Cs2SetTiming(0);
 
   // MPEG specific stuff
@@ -932,34 +907,23 @@ int Cs2ForceCloseTray( int coreid, const char * cdpath ){
   return 0;
 };
 
+
 //////////////////////////////////////////////////////////////////////////////
 
 void Cs2Exec(u32 timing) {
    Cs2Area->_statuscycles += timing * 3;
    Cs2Area->_periodiccycles += timing * 3;
 
-   // Command is not acceptable while other command is executing
-   if( Cs2Area->_command_execlock > 0  ){
-      Cs2Area->_command_execlock -= timing;
-      if (Cs2Area->_command_execlock <= 0) {
-        Cs2SetIRQ(Cs2Area->_delay_irq);
-      }
-   }
-   else {
-     if (Cs2Area->_commandtiming > 0)
-     {
-       if (Cs2Area->_commandtiming <= timing)
-       {
+   if (Cs2Area->_commandtiming > 0)
+   {
+      if (Cs2Area->_commandtiming < timing)
+      {
          Cs2Execute();
          Cs2Area->_commandtiming = 0;
-       }
-       else {
-         //printf("delay timing %d\n",Cs2Area->_commandtiming);
+      }
+      else
          Cs2Area->_commandtiming -= timing;
-       }
-     }
    }
-
 
    if (Cs2Area->_statuscycles >= Cs2Area->_statustiming)
    {
@@ -1167,14 +1131,11 @@ void Cs2SetTiming(int playing) {
 //////////////////////////////////////////////////////////////////////////////
 
 void Cs2SetCommandTiming(u8 cmd) {
-  switch(cmd) {
-    case 0x02: // Cs2GetToc
-      Cs2Area->_commandtiming = 250;
-      break;
-    default:
-      Cs2Area->_commandtiming = 50;
-      break;
-  }
+   switch(cmd) {
+      default:
+               Cs2Area->_commandtiming = 1;
+               break;
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1186,9 +1147,9 @@ void Cs2Execute(void) {
 
   switch (instruction) {
     case 0x00:
-      CDLOG("cs2\t: Command: getStatus\n");
+      //CDLOG("cs2\t: Command: getStatus\n");
       Cs2GetStatus();
-      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
+      //CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x01:
       CDLOG("cs2\t: Command: getHardwareInfo\n");
@@ -1294,9 +1255,9 @@ void Cs2Execute(void) {
       CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x51:
-      CDLOG("cs2\t: Command: getSectorNumber %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
+      //CDLOG("cs2\t: Command: getSectorNumber %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2GetSectorNumber();
-      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
+      //CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x52:
       CDLOG("cs2\t: Command: calculateActualSize %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
@@ -1821,9 +1782,6 @@ void Cs2PlayDisc(void) {
   // Calculate Seek time
   length = abs((int)current_fad - (int)Cs2Area->FAD);
   Cs2Area->_periodictiming = length; // seektime
-  if (Cs2Area->_periodictiming < 40000) {
-    Cs2Area->_periodictiming = 40000;
-  }
   if (Cs2Area->_periodictiming > (u32)SEEK_TIME) {
      Cs2Area->_periodictiming = (u32)SEEK_TIME;
   }
@@ -2270,9 +2228,7 @@ void Cs2ResetSelector(void) {
   }
 
   doCDReport(Cs2Area->status);
-  Cs2SetIRQ(CDB_HIRQ_CMOK);
-  Cs2Area->_command_execlock = 450;
-  Cs2Area->_delay_irq = CDB_HIRQ_ESEL;
+  Cs2SetIRQ(CDB_HIRQ_CMOK | CDB_HIRQ_ESEL);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2341,11 +2297,7 @@ void Cs2CalculateActualSize(void) {
   CDLOG("Cs2Area->calcsize = %d", Cs2Area->calcsize);
 
   doCDReport(Cs2Area->status);
-  Cs2SetIRQ(CDB_HIRQ_CMOK);
-
-  Cs2Area->_command_execlock = 30 * casnumsect;
-  Cs2Area->_delay_irq = CDB_HIRQ_ESEL;
-
+  Cs2SetIRQ(CDB_HIRQ_CMOK | CDB_HIRQ_ESEL);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2498,7 +2450,7 @@ void Cs2GetSectorData(void)
    Cs2Area->datasectstotrans = (u16)gsdsectnum;
 
    doCDReport(Cs2Area->status);
-   Cs2SetIRQ(CDB_HIRQ_CMOK | CDB_HIRQ_DRDY );
+   Cs2SetIRQ(CDB_HIRQ_CMOK | CDB_HIRQ_DRDY | CDB_HIRQ_EHST);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2549,10 +2501,7 @@ void Cs2DeleteSectorData(void)
       Cs2Area->isonesectorstored = 0;
 
    doCDReport(Cs2Area->status);
-   Cs2SetIRQ(CDB_HIRQ_CMOK);
-
-   Cs2Area->_command_execlock = 30 * dsdsectnum;
-   Cs2Area->_delay_irq = CDB_HIRQ_EHST;
+   Cs2SetIRQ(CDB_HIRQ_CMOK | CDB_HIRQ_EHST);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -4035,11 +3984,7 @@ u8 Cs2GetIP(int autoregion) {
          cdip->system[16]='\0';
          memcpy(cdip->company, buf+0x10, 16);
          cdip->company[16]='\0';
-
-         char tmp[11];
-         memcpy(tmp, buf+0x20, 0x0A);
-         tmp[10]='\0';
-         sscanf(tmp, "%s", cdip->itemnum);
+         sscanf(buf+0x20, "%s", cdip->itemnum);
 		 
 		 // make gameid as u64
 		 cdip->gameid = 0;
@@ -4157,7 +4102,7 @@ int Cs2SaveState(FILE * fp) {
 
    // This is mostly kludge, but it will have to do until I have time to rewrite it all
 
-   offset = StateWriteHeader(fp, "CS2 ", 3);
+   offset = StateWriteHeader(fp, "CS2 ", 2);
 
    // Write cart type
    ywrite(&check, (void *) &Cs2Area->carttype, 4, 1, fp);
@@ -4259,8 +4204,6 @@ int Cs2SaveState(FILE * fp) {
    ywrite(&check, (void *)Cs2Area->mpegstm, sizeof(mpegstm_struct), 2, fp);
 
    ywrite(&check, (void *)&Cs2Area->playtype, 4, 1, fp);
-
-   ywrite(&check, (void *)&Cs2Area->_command_execlock, 4, 1, fp);
 
    return StateFinishHeader(fp, offset);
 }
@@ -4406,9 +4349,6 @@ int Cs2LoadState(FILE * fp, int version, int size) {
    yread(&check, (void *)Cs2Area->mpegstm, sizeof(mpegstm_struct), 2, fp);
 
    yread(&check, (void *)&Cs2Area->playtype, 4, 1, fp);
-
-   if (version > 2) yread(&check, (void *)&Cs2Area->_command_execlock, 4, 1, fp);
-   
 
    return size;
 }

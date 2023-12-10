@@ -43,15 +43,9 @@ QString getDataDirPath()
    QCoreApplication::setApplicationName(oldApplicationName);
 	return path;
 #else
-   QString oldApplicationName = QCoreApplication::applicationName();   
-   QCoreApplication::setApplicationName("yabause");
-   QString path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
-   QCoreApplication::setApplicationName(oldApplicationName);
-   return path;
+	return QApplication::applicationDirPath();
 #endif
 }
-
-
 
 QString getIniFile( const QString& s )
 {

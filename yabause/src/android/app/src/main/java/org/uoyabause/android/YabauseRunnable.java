@@ -1,27 +1,11 @@
-/*  Copyright 2019 devMiyax(smiyaxdev@gmail.com)
-
-    This file is part of YabaSanshiro.
-
-    YabaSanshiro is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    YabaSanshiro is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with YabaSanshiro; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-*/
-
-
 package org.uoyabause.android;
 
 import android.util.Log;
 import android.view.Surface;
+
+/**
+ * Created by shinya on 2017/08/27.
+ */
 
 public class YabauseRunnable implements Runnable
 {
@@ -50,15 +34,10 @@ public class YabauseRunnable implements Runnable
     public static native String getGameinfo();
     public static native String savestate( String path );
     public static native void loadstate( String path );
-    public static native String savestate_compress( String path );
-    public static native void loadstate_compress( String path );
-    public static native int record( String path );
-    public static native int play( String path );
-    public static native int getRecordingStatus();
     public static native void pause();
     public static native void resume();
     public static native void setPolygonGenerationMode( int pg );
-    public static native void setAspectRateMode( int ka);
+    public static native void setKeepAspect( int ka);
     public static native void setSoundEngine( int engine );
     public static native void setResolutionMode( int resoution_mode );
     public static native void setRbgResolutionMode( int resoution_mode );
@@ -66,7 +45,6 @@ public class YabauseRunnable implements Runnable
     public static native void openTray();
     public static native void closeTray();
     public static native void switch_padmode( int mode );
-    public static native void switch_padmode2( int mode );
     public static native void updateCheat( String[] cheat_code );
     public static native void setScspSyncPerFrame( int scsp_sync_count );
     public static native void setCpuSyncPerLine( int cpu_sync_count );
@@ -76,16 +54,12 @@ public class YabauseRunnable implements Runnable
     public static native String getFilelist( int deviceid  );
     public static native int deletefile( int index );
     public static native String getFile( int index  );
-    public static native String putFile( String path);
+    public static native String putFile( );
     public static native int copy( int target_device, int file_index );
-    public static native byte[] getGameinfoFromChd( String path );
+    public static native String getGameinfoFromChd( String path );
 
     private boolean inited;
     private boolean paused;
-
-    static final int IDLE = -1;
-    static final int RECORDING = 0;
-    static final int PLAYING = 1;
 
     public YabauseRunnable(Yabause yabause)
     {

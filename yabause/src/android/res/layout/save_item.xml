@@ -6,14 +6,14 @@
     android:gravity="center_vertical"
     android:orientation="vertical" >
 
-    <ImageView
+    <ImageView xmlns:android="http://schemas.android.com/apk/res/android"
         android:id="@+id/save_screenshot"
         android:layout_width="fill_parent"
         android:layout_height="224dp"
         android:layout_margin="10dp"
         android:scaleType="centerCrop" />
 
-    <TextView
+    <TextView xmlns:android="http://schemas.android.com/apk/res/android"
         android:id="@+id/save_name"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"

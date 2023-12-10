@@ -35,7 +35,6 @@ import org.yabause.android.YabauseStorage;
 import org.yabause.android.GameInfoManager;
 
 import java.util.TreeSet;
-import java.util.Locale;
 
 class SavesHandler extends Handler {
 
@@ -152,7 +151,7 @@ class SaveListAdapter extends BaseAdapter {
 
     public void deleteSlot(int slot) {
         String[] saves = new String[1];
-        saves[0] = String.format(Locale.US, "%s_%03d.yss", itemnum, slot);
+        saves[0] = String.format("%s_%03d.yss", itemnum, slot);
         storage.deleteGameSaves(saves);
     }
 
@@ -160,7 +159,7 @@ class SaveListAdapter extends BaseAdapter {
         String[] saves = new String[slots.length];
         int i = 0;
         for(int slot : slots) {
-            saves[i++] = String.format(Locale.US, "%s_%03d.yss", itemnum, slot);
+            saves[i++] = String.format("%s_%03d.yss", itemnum, slot);
         }
         storage.deleteGameSaves(saves);
     }

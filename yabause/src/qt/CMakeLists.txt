@@ -24,11 +24,6 @@ if(Qt5_FOUND)
 	find_package(Qt5Multimedia REQUIRED)
 	add_definitions(-DHAVE_QT_MULTIMEDIA=1)
 
-	find_package(Qt5WebEngineWidgets REQUIRED)
-	include_directories(${Qt5WebEngineWidgets_INCLUDE_DIRS})
-	add_definitions(${Qt5WebEngineWidgets_DEFINITIONS}) 
-
-
     # Since Qt5's cmake script doesn't set it, we will have to
     SET(QT_BINARY_DIR "${_qt5Core_install_prefix}/bin")
     if (MSYS2_BUILD)
@@ -65,16 +60,13 @@ else()
 	include( ${QT_USE_FILE} )
 endif() 
 
-
 # qt resources file
 set( yabause_qt_RESOURCES resources/resources.qrc )
 
 if ( WIN32 )
 	# Windows port libraries
 	set( yabause_qt_windows_LIBRARIES
-		vfw32 legacy_stdio_definitions.lib 
-		advapi32 ws2_32 crypt32  Psapi Iphlpapi Userenv
-		)
+		vfw32 legacy_stdio_definitions.lib )
 
 	# resources
 	set ( yabause_qt_windows_RESOURCES
@@ -113,8 +105,7 @@ set( yabause_qt_FORMS
     ui/UIHexInput.ui
     ui/UIMemoryTransfer.ui 
     ui/UIMemoryEditor.ui 
-	ui/UIMemorySearch.ui 
-	ui/WebLoginWindow.ui )
+    ui/UIMemorySearch.ui )
 
 # pure C headers
 set( yabause_qt_HEADERS
@@ -158,13 +149,11 @@ set( yabause_qt_MOC_HEADERS
     ui/UIMemoryTransfer.h
     ui/UIHexEditor.h
     ui/UIMemoryEditor.h
-	ui/UIMemorySearch.h
-	ui/WebLoginWindow.h
+    ui/UIMemorySearch.h
 	YabauseGL.h
 	VolatileSettings.h
 	Settings.h
-	YabauseThread.h 
-	)
+	YabauseThread.h )
 
 # C sources
 set( yabause_qt_SOURCES
@@ -205,8 +194,7 @@ set( yabause_qt_SOURCES
     ui/UIMemoryTransfer.cpp
     ui/UIHexEditor.cpp
     ui/UIMemoryEditor.cpp
-	ui/UIMemorySearch.cpp
-	ui/WebLoginWindow.cpp
+    ui/UIMemorySearch.cpp
 	Settings.cpp
 	VolatileSettings.cpp
 	YabauseThread.cpp
@@ -260,22 +248,6 @@ include_directories(
 	${QT_QTOPENGL_INCLUDE_DIR} )
 endif()
 
-if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-  # git clone https://github.com/firebase/firebase-cpp-sdk.git -b v6.11.0 yabause/src/qt/firebase-cpp-sdk
-	add_subdirectory( firebase-cpp-sdk )
-	set( FIREBASE_TARGETS firebase_app firebase_auth firebase_storage firebase_database)
-else()
-  # SET var=%cd%
-	# bitsadmin.exe /TRANSFER htmlget https://dl.google.com/firebase/sdk/cpp/firebase_cpp_sdk_6.11.0.zip %var%\a.zip
-	# tar -v -xf a.zip -C yabause\src\qt\
-	set(MSVC_RUNTIME_MODE MD)
-	add_subdirectory( firebase_cpp_sdk )
-	set( FIREBASE_TARGETS firebase_app firebase_auth firebase_storage firebase_database)
-	include_directories(${zlib_INCLUDE_DIR})
-endif()
-
-
-
 # APPLE // not necessary mac os x, but i don't care ;)
 if (APPLE)
 	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE true )
@@ -298,28 +270,12 @@ if (Qt5_FOUND)
 else()
 	target_link_libraries( yabause-qt ${QT_LIBRARIES} )
 endif()
-target_link_libraries( yabause-qt ${FIREBASE_TARGETS} )
+
 yab_port_success(yabause-qt)
-
-# copy need files for running
-if(WIN32)
-
-
-add_custom_command(
-	TARGET yabause-qt
-	POST_BUILD
-	COMMAND ${QT_BINARY_DIR}/windeployqt.exe ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/${YAB_PORT_NAME}.exe
-)
-
-endif()
-
 configure_file(yabause.desktop.in ${YAB_PORT_NAME}.desktop)
 
 if (WIN32)
 	install(TARGETS yabause-qt DESTINATION ".")
-	set_property(INSTALL $<TARGET_FILE_NAME:yabause-qt>
-		PROPERTY CPACK_START_MENU_SHORTCUTS "Yaba Sanshiro"
-	)
 	if (GLUT_FOUND)
 		install(FILES ${GLUT_INCLUDE_DIR}/../freeglut.dll DESTINATION ".")
 	endif ()
@@ -340,7 +296,31 @@ if (WIN32)
 		endif ()
 	endif ()
 	if(Qt5_FOUND) 
-		install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/ DESTINATION "." )
+		install(FILES ${QT_BINARY_DIR}/Qt5Core.dll DESTINATION ".")
+		install(FILES ${QT_BINARY_DIR}/Qt5Gui.dll DESTINATION ".")
+		install(FILES ${QT_BINARY_DIR}/Qt5OpenGL.dll DESTINATION ".")
+		install(FILES ${QT_BINARY_DIR}/Qt5Widgets.dll DESTINATION ".")
+		install(FILES ${QT_BINARY_DIR}/Qt5Multimedia.dll DESTINATION ".")
+		install(FILES ${QT_BINARY_DIR}/Qt5Network.dll DESTINATION ".")
+		if (NOT MSYS2_BUILD)
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "icudt*.dll")
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "icuin*.dll")
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "icuuc*.dll")
+		else()
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "libicudt*.dll" PATTERN "libicudtd*.dll" EXCLUDE)
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "libicuin*.dll" PATTERN "libicuind*.dll" EXCLUDE)
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "libicuuc*.dll" PATTERN "libicuucd*.dll" EXCLUDE)
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "libbz2-*.dll")
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "libfreetype-*.dll")
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "libglib*.dll")
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "libgraphite2*.dll")
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "libharfbuzz-*.dll" PATTERN "libharfbuzz-gobject*.dll" EXCLUDE PATTERN "libharfbuzz-icu*.dll" EXCLUDE)
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "libpcre16*.dll" PATTERN "libpcre-*.dll")
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "libiconv*.dll")
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "libintl*.dll")
+			install(DIRECTORY ${QT_BINARY_DIR}/ DESTINATION "." FILES_MATCHING PATTERN "libpng*.dll")
+		endif()
+		install(FILES ${QT_PLUGINS_DIR}/platforms/qwindows.dll DESTINATION "platforms")
 	else()
 		install(FILES ${QT_BINARY_DIR}/QtCore4.dll DESTINATION ".")
 		install(FILES ${QT_BINARY_DIR}/QtGui4.dll DESTINATION ".")
@@ -350,16 +330,13 @@ if (WIN32)
 		endif()
 	endif()
 
-	#install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../AUTHORS    DESTINATION "." RENAME AUTHORS.txt)
-	#install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../ChangeLog  DESTINATION "." RENAME ChangeLog.txt)
-	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../COPYING.txt    DESTINATION "." RENAME COPYING.txt)
-	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../EULA.txt    DESTINATION "." RENAME EULA.txt)
+	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../AUTHORS    DESTINATION "." RENAME AUTHORS.txt)
+	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../ChangeLog  DESTINATION "." RENAME ChangeLog.txt)
+	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../COPYING    DESTINATION "." RENAME COPYING.txt)
 	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../../win_template/readme.txt     DESTINATION "." RENAME README.txt)
 	#install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../README     DESTINATION "." RENAME README.txt)
 	#install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../README.WIN DESTINATION "." RENAME README.WIN.txt)
 	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/donate.png DESTINATION "." )
-	install(FILES c:/bin/libeay32.dll DESTINATION "." )
-	install(FILES c:/bin/ssleay32.dll DESTINATION "." )
 	
 	if (MINGW)
 		get_filename_component( Mingw_Path ${CMAKE_CXX_COMPILER} PATH )
@@ -389,8 +366,6 @@ if (WIN32)
 else ()
 	install(TARGETS yabause-qt DESTINATION "bin")
 	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${YAB_PORT_NAME}.desktop DESTINATION "share/applications")
-	#install(FILES "doc/yabause.1" DESTINATION "${YAB_MAN_DIR}/man1" RENAME "${YAB_PORT_NAME}.1")
-	install(FILES "resources/icons/yabasanshiro.png" DESTINATION "share/pixmaps/")
+	install(FILES "doc/yabause.1" DESTINATION "${YAB_MAN_DIR}/man1" RENAME "${YAB_PORT_NAME}.1")
+	install(FILES "resources/icons/yabause.png" DESTINATION "share/pixmaps")
 endif ()
-
-

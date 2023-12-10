@@ -41,7 +41,6 @@ static char g_system_dir[PATH_MAX];
 static char full_path[PATH_MAX];
 static char bios_path[PATH_MAX];
 static char bup_path[PATH_MAX];
-static int system_language = 0;
 
 static int game_width  = 320;
 static int game_height = 240;
@@ -97,10 +96,9 @@ extern struct retro_hw_render_callback hw_render;
 void retro_set_environment(retro_environment_t cb)
 {
    static const struct retro_variable vars[] = {
-      { "yabasanshiro_force_hle_bios", "Force HLE BIOS (restart); disabled|enabled" },
-      { "yabasanshiro_frameskip", "Auto-frameskip; enabled|disabled" },
+      { "yabasanshiro_force_hle_bios", "Force HLE BIOS (restart, deprecated, debug only); disabled|enabled" },
+      { "yabasanshiro_frameskip", "Auto-frameskip (prevent fast-forwarding); enabled|disabled" },
       { "yabasanshiro_addon_cart", "Addon Cartridge (restart); 4M_extended_ram|1M_extended_ram" },
-      { "yabasanshiro_system_language", "System Language (restart); english|deutsch|french|spanish|italian|japanese" },
       { "yabasanshiro_multitap_port1", "6Player Adaptor on Port 1; disabled|enabled" },
       { "yabasanshiro_multitap_port2", "6Player Adaptor on Port 2; disabled|enabled" },
 #ifdef DYNAREC_DEVMIYAX
@@ -559,7 +557,7 @@ void retro_set_resolution()
          current_height = 2160;
          break;
    }
-   VIDCore->Resize(0, 0, current_width, current_height, 0, FULL);
+   VIDCore->Resize(0, 0, current_width, current_height, 0, 0);
    retro_reinit_av_info();
    VIDCore->SetSettingValue(VDP_SETTING_RESOLUTION_MODE, resolution_mode);
 }
@@ -747,24 +745,6 @@ void check_variables(void)
          addon_cart_type = CART_DRAM8MBIT;
       else if (strcmp(var.value, "4M_extended_ram") == 0 && addon_cart_type != CART_DRAM32MBIT)
          addon_cart_type = CART_DRAM32MBIT;
-   }
-
-   var.key = "yabasanshiro_system_language";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-      {
-      if (strcmp(var.value, "english") == 0)
-         system_language = 0;
-      else if (strcmp(var.value, "deutsch") == 0)
-         system_language = 1;
-      else if (strcmp(var.value, "french") == 0)
-         system_language = 2;
-      else if (strcmp(var.value, "spanish") == 0)
-         system_language = 3;
-      else if (strcmp(var.value, "italian") == 0)
-         system_language = 4;
-      else if (strcmp(var.value, "japanese") == 0)
-         system_language = 5;
    }
 
    var.key = "yabasanshiro_multitap_port1";
@@ -998,7 +978,7 @@ bool retro_load_game_common()
    yinit.use_new_scsp              = 1;
    yinit.scsp_sync_count_per_frame = 0;
    yinit.extend_backup             = 1;
-   yinit.scsp_main_mode            = 0;
+   yinit.scsp_main_mode            = 1;
    yinit.videoformattype           = VIDEOFORMATTYPE_NTSC;
    yinit.video_filter_type         = 0;
 
@@ -1297,7 +1277,6 @@ bool retro_load_game(const struct retro_game_info *info)
    yinit.cdcoretype       = CDCORE_ISO;
    yinit.cdpath           = full_path;
    yinit.biospath         = (hle_bios_force ? NULL : bios_path);
-   yinit.syslanguageid    = system_language;
    yinit.carttype         = addon_cart_type;
    yinit.cartpath         = "\0";
 
@@ -1395,7 +1374,7 @@ if(g_frame_skip == 1)
    if(!one_frame_rendered)
       video_cb(NULL, current_width, current_height, 0);
 
-   //reset_global_gl_state();
+   reset_global_gl_state();
 }
 
 #ifdef ANDROID

@@ -17,25 +17,6 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
-/*
-        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
-
-This file is part of YabaSanshiro.
-
-        YabaSanshiro is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-YabaSanshiro is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-        You should have received a copy of the GNU General Public License
-along with YabaSanshiro; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-*/
 
 #ifndef MEMORY_H
 #define MEMORY_H
@@ -362,12 +343,12 @@ extern "C" {
   static INLINE void DummyWriteLong(Dummy UNUSED * d, u32 UNUSED a, u32 UNUSED v) {}
 
   void MappedMemoryInit(void);
-  u8 FASTCALL MappedMemoryReadByte(u32 addr, u32 * cycle);
-  u16 FASTCALL MappedMemoryReadWord(u32 addr, u32 * cycle);
-  u32 FASTCALL MappedMemoryReadLong(u32 addr, u32 * cycle);
-  void FASTCALL MappedMemoryWriteByte(u32 addr, u8 val, u32 * cycle);
-  void FASTCALL MappedMemoryWriteWord(u32 addr, u16 val, u32 * cycle);
-  void FASTCALL MappedMemoryWriteLong(u32 addr, u32 val, u32 * cycle);
+  u8 FASTCALL MappedMemoryReadByte(u32 addr);
+  u16 FASTCALL MappedMemoryReadWord(u32 addr);
+  u32 FASTCALL MappedMemoryReadLong(u32 addr);
+  void FASTCALL MappedMemoryWriteByte(u32 addr, u8 val);
+  void FASTCALL MappedMemoryWriteWord(u32 addr, u16 val);
+  void FASTCALL MappedMemoryWriteLong(u32 addr, u32 val);
   u8 FASTCALL MappedMemoryReadByteNocache(u32 addr);
   u16 FASTCALL MappedMemoryReadWordNocache(u32 addr);
   u32 FASTCALL MappedMemoryReadLongNocache(u32 addr);
@@ -437,9 +418,6 @@ extern "C" {
   int YabLoadStateStream(FILE *stream);
   int YabSaveStateBuffer(void **buffer, size_t *size);
   int YabLoadStateBuffer(const void *buffer, size_t size);
-
-  int YabLoadCompressedState(const char *filename);
-  int YabSaveCompressedState(const char *filename);
 
 // Mapped mewmory
 void * YabMemMap(char * filename, u32 size );

@@ -1,23 +1,3 @@
-/*  Copyright 2019 devMiyax(smiyaxdev@gmail.com)
-
-    This file is part of YabaSanshiro.
-
-    YabaSanshiro is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    YabaSanshiro is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with YabaSanshiro; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-*/
-
-
 package org.uoyabause.android;
 
 import android.app.AlertDialog;
@@ -66,8 +46,6 @@ class BasicInputDevice {
     public int _selected_device_id = -1;
     public int _playerindex = 0;
     boolean _testmode = false;
-    Integer currentButtonState = 0;
-    final int showMenuCode = 0x1c40;
     HashMap<Integer, Integer> Keymap;
 
     PadManagerV16 _pdm;
@@ -161,8 +139,7 @@ class BasicInputDevice {
                 Integer  sat_btn = e.getValue();
                 int btn = e.getKey();
 
-                if( (_pdm.getAnalogMode() == MODE_ANALOG && _playerindex == 0) ||
-                    (_pdm.getAnalogMode2() == MODE_ANALOG && _playerindex == 1)  ) {
+                if( _pdm.getAnalogMode() == MODE_ANALOG ) {
                     float motion_value = motionEvent.getAxisValue((btn & 0x00007FFF));
 
                     if (sat_btn == PadEvent.PERANALOG_AXIS_X || sat_btn == PadEvent.PERANALOG_AXIS_Y ) {
@@ -259,21 +236,6 @@ class BasicInputDevice {
             Integer PadKey = Keymap.get(keyCode);
 
             if (PadKey != null) {
-
-                currentButtonState |= (1<<PadKey);
-                if( showMenuCode == currentButtonState ){
-                    for( int i =0; i< 32; i++ ) {
-                        if( (currentButtonState & (0x1<<i) ) != 0 ) {
-                            YabauseRunnable.release(i, _playerindex);
-                        }
-                    }
-                    currentButtonState = 0; // clear
-                    _pdm.showMenu();
-                    return 1;
-                }
-
-                //Log.d(this.getClass().getSimpleName(),"currentButtonState = " + Integer.toHexString(currentButtonState) );
-
                 event.startTracking();
                 if (_testmode)
                     _pdm.addDebugString("onKeyDown: " + keyCode + " Satpad: " + PadKey.toString());
@@ -306,10 +268,6 @@ class BasicInputDevice {
             if( !event.isCanceled() ){
                 Integer PadKey = Keymap.get(keyCode);
                 if( PadKey != null ) {
-
-                    currentButtonState &= ~(1<<PadKey);
-                    //Log.d(this.getClass().getSimpleName(),"currentButtonState = " + Integer.toHexString(currentButtonState) );
-
                     if( _testmode)
                         _pdm.addDebugString("onKeyUp: " + keyCode + " Satpad: " + PadKey.toString());
                     else
@@ -520,6 +478,7 @@ class PadManagerV16 extends PadManager {
     
     public void setPlayer1InputDevice( String deviceid ){
 
+
     	if( deviceid == null ){
             pads[0] = new BasicInputDevice(this);
             pads[0]._selected_device_id = -1;
@@ -540,9 +499,9 @@ class PadManagerV16 extends PadManager {
             pads[0]._selected_device_id = id;
     	}
 
-    	pads[0]._playerindex = 0;
-      pads[0].loadSettings("keymap.json");
-      pads[0]._testmode = _testmode;
+        pads[0]._playerindex = 0;
+        pads[0].loadSettings("keymap.json");
+        pads[0]._testmode = _testmode;
     	return;
     }
     

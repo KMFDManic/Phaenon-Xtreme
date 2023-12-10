@@ -17,25 +17,6 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
-/*
-        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
-
-This file is part of YabaSanshiro.
-
-        YabaSanshiro is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-YabaSanshiro is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-        You should have received a copy of the GNU General Public License
-along with YabaSanshiro; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-*/
 
 /*! \file memory.c
     \brief Memory access functions.
@@ -79,12 +60,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 #if CACHE_ENABLE
 #else
-u8 FASTCALL MappedMemoryReadByteNocache(u32 addr){ return MappedMemoryReadByte(addr, NULL); }
-u16 FASTCALL MappedMemoryReadWordNocache(u32 addr){ return MappedMemoryReadWord(addr, NULL); }
-u32 FASTCALL MappedMemoryReadLongNocache(u32 addr){ return MappedMemoryReadLong(addr, NULL); }
-void FASTCALL MappedMemoryWriteByteNocache(u32 addr, u8 val){ MappedMemoryWriteByte(addr,val, NULL);  }
-void FASTCALL MappedMemoryWriteWordNocache(u32 addr, u16 val){ MappedMemoryWriteWord(addr, val, NULL); }
-void FASTCALL MappedMemoryWriteLongNocache(u32 addr, u32 val){ MappedMemoryWriteLong(addr, val, NULL); }
+u8 FASTCALL MappedMemoryReadByteNocache(u32 addr){ return MappedMemoryReadByte(addr); }
+u16 FASTCALL MappedMemoryReadWordNocache(u32 addr){ return MappedMemoryReadWord(addr); }
+u32 FASTCALL MappedMemoryReadLongNocache(u32 addr){ return MappedMemoryReadLong(addr); }
+void FASTCALL MappedMemoryWriteByteNocache(u32 addr, u8 val){ MappedMemoryWriteByte(addr,val);  }
+void FASTCALL MappedMemoryWriteWordNocache(u32 addr, u16 val){ MappedMemoryWriteWord(addr, val); }
+void FASTCALL MappedMemoryWriteLongNocache(u32 addr, u32 val){ MappedMemoryWriteLong(addr, val); }
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -189,7 +170,7 @@ void * YabMemMap(char * filename, u32 size ) {
   hFile = CreateFileA(
     filename, 
     GENERIC_READ|GENERIC_WRITE, 
-    FILE_SHARE_READ,
+    0, 
     0, 
     OPEN_EXISTING, 
     FILE_ATTRIBUTE_NORMAL,
@@ -728,118 +709,6 @@ void MappedMemoryInit()
      &BupRamMemoryWriteLong);
 }
 
-#if 0
-#define GET_MEM_CYCLE_W *cycle = 0;
-#define GET_MEM_CYCLE_R *cycle = 0;
-#else
-INLINE int getVramCycle(u32 addr) {
-  if (yabsys.LineCount >= yabsys.VBlankLineCount) { 
-    return 2; 
-  }
-  if ((addr & 0x000F0000) < 0x00040000) {
-    return Vdp2External.cpu_cycle_a;
-  }
-  else {
-    return Vdp2External.cpu_cycle_b;
-  }
-  return 2;
-}
-
-// gcc 4.9 bug
-#define GET_MEM_CYCLE_W \
-  switch (addr & 0xDFF00000) { \
-  case 0x00200000: /* Low */ \
-    *cycle = 7; \
-    break; \
-  case 0x05A00000: /* SOUND */ \
-    *cycle = 7; \
-    break; \
-  case 0x05C00000: /* VDP1 */ \
-    *cycle = 2; \
-    break; \
-  case 0x05e00000: /* VDP2 */ \
-    *cycle = getVramCycle(addr);  \
-    break; \
-  case 0x06000000: /* High */ \
-    *cycle = 2; \
-    break; \
-  default: \
-    *cycle = 0; \
-    break; \
-  } \
-
-#define GET_MEM_CYCLE_R \
-  switch (addr & 0xDFF00000) { \
-  case 0x00000000: /* ROM */ \
-  case 0x00100000: /* Backup */ \
-    *cycle = 16; \
-    break; \
-  case 0x00200000: /* Low */ \
-    *cycle = 12; \
-    break; \
-  case 0x02000000: /* CS0 */ \
-  case 0x05800000: /* CS2 */ \
-    *cycle = 24; \
-    break; \
-  case 0x05A00000: /* SOUND RAM */ \
-  case 0x05B00000: /* SOUND REG */ \
-  case 0x05C00000: /* VDP1 RAM */ \
-    *cycle = 50; \
-    break; \
-  case 0x05E00000: /* VDP2 RAM */ \
-    *cycle = getVramCycle(addr); \
-    break; \
-  case 0x06000000: /* High */ \
-    *cycle = 0; \
-    break; \
-  default: \
-    *cycle = 0; \
-    break; \
-  } \
-
-#endif
-
-#if 0
-inline u32 getMemCycle(u32 addr) {
-  switch (addr & 0xFFF00000) {
-  case 0x26000000: // High
-    return 7;
-    break;
-  case 0x20200000: // Low
-    return 7; 
-    break;
-  case 0x25A00000: // SOUND RAM
-  case 0x25B00000: // SOUND REG
-    return 30;
-    break;
-  case 0x25C00000: // VDP1 RAM
-    return 7;
-  case 0x25D00000: // VDP1 REG
-    return 7;
-    break;
-  case 0x25E00000: // VDP2 RAM
-    if (yabsys.LineCount >= yabsys.VBlankLineCount) {
-      return 7;
-    }
-    else {
-      return 80;
-    }
-    break;
-  case 0x25F00000: // VDP2 REG
-    return 2;
-    break;
-  case 0x06000000: // High
-  case 0x00200000: // Low
-    return 0;
-    break;
-  default:
-    return 0;
-    break;
-  }
-  return 1;
-}
-#endif
-
 //////////////////////////////////////////////////////////////////////////////
 #if CACHE_ENABLE
 u8 FASTCALL MappedMemoryReadByte(u32 addr){
@@ -847,31 +716,26 @@ u8 FASTCALL MappedMemoryReadByte(u32 addr){
 }
 u8 FASTCALL MappedMemoryReadByteNocache(u32 addr)
 #else
-u8 FASTCALL MappedMemoryReadByte(u32 addr, u32 * cycle)
+u8 FASTCALL MappedMemoryReadByte(u32 addr)
 #endif
 {
-  if (cycle != NULL) { 
-    //*cycle = getMemCycle(addr); 
-    GET_MEM_CYCLE_R
-  }
    switch (addr >> 29)
    {
       case 0x0:
       case 0x1:
       case 0x4:
+      case 0x5:
       {
          // Cache/Non-Cached
          return ReadByteList[(addr >> 16) & 0xFFF](addr);
       }
-
+/*
       case 0x2:
-      case 0x5:
       {
-        // Purge Area
-        return 0xFF;
+         // Purge Area
+         break;
       }
-
-
+*/
       //case 0x4:
       case 0x6:
          // Data Array
@@ -903,7 +767,6 @@ u8 FASTCALL MappedMemoryReadByte(u32 addr, u32 * cycle)
    return 0;
 }
 
-
 //////////////////////////////////////////////////////////////////////////////
 #if CACHE_ENABLE
 u16 FASTCALL MappedMemoryReadWord(u32 addr){
@@ -911,31 +774,26 @@ u16 FASTCALL MappedMemoryReadWord(u32 addr){
 }
 u16 FASTCALL MappedMemoryReadWordNocache(u32 addr)
 #else
-u16 FASTCALL MappedMemoryReadWord(u32 addr, u32 * cycle)
+u16 FASTCALL MappedMemoryReadWord(u32 addr)
 #endif
 {
-  if (cycle != NULL) { 
-    //*cycle = getMemCycle(addr); 
-    GET_MEM_CYCLE_R
-  }
    switch (addr >> 29)
    {
       case 0x0:
       case 0x1:
       case 0x4:
+      case 0x5:
       {
          // Cache/Non-Cached
          return ReadWordList[(addr >> 16) & 0xFFF](addr);
       }
-
+/*
       case 0x2:
-      case 0x5:
       {
-        // Purge Area
-        return 0xFFFFFFFF;
+         // Purge Area
+         break;
       }
-
-
+*/
       //case 0x4:
       case 0x6:
          // Data Array
@@ -974,30 +832,26 @@ u32 FASTCALL MappedMemoryReadLong(u32 addr){
 }
 u32 FASTCALL MappedMemoryReadLongNocache(u32 addr)
 #else
-u32 FASTCALL MappedMemoryReadLong(u32 addr, u32 * cycle)
+u32 FASTCALL MappedMemoryReadLong(u32 addr)
 #endif
 {
-  if (cycle != NULL) { 
-    //*cycle = getMemCycle(addr); 
-    GET_MEM_CYCLE_R
-  }
    switch (addr >> 29)
    {
       case 0x0:
       case 0x1:
       case 0x4:
+      case 0x5:
       {
          // Cache/Non-Cached
          return ReadLongList[(addr >> 16) & 0xFFF](addr);
       }
-
+/*
       case 0x2:
-      case 0x5:
       {
-        // Purge Area
-        return 0xFFFFFFFF;
+         // Purge Area
+         break;
       }
-
+*/
       case 0x3:
       {
          // Address Array
@@ -1040,31 +894,28 @@ void FASTCALL MappedMemoryWriteByte(u32 addr, u8 val){
 }
 void FASTCALL MappedMemoryWriteByteNocache(u32 addr, u8 val)
 #else
-void FASTCALL MappedMemoryWriteByte(u32 addr, u8 val, u32 * cycle)
+void FASTCALL MappedMemoryWriteByte(u32 addr, u8 val)
 #endif
 {
-  if (cycle != NULL) { 
-    //*cycle = getMemCycle(addr); ]
-    GET_MEM_CYCLE_W
-  }
-  switch (addr >> 29)
+
+   switch (addr >> 29)
    {
       case 0x0:
       case 0x1:
       case 0x4:
+      case 0x5:
       {
          // Cache/Non-Cached
          WriteByteList[(addr >> 16) & 0xFFF](addr, val);
          return;
       }
-
+/*
       case 0x2:
-      case 0x5:
       {
          // Purge Area
          return;
       }
-
+*/
       //case 0x4:
       case 0x6:
          // Data Array
@@ -1104,18 +955,15 @@ void FASTCALL MappedMemoryWriteWord(u32 addr, u16 val){
 }
 void FASTCALL MappedMemoryWriteWordNocache(u32 addr, u16 val)
 #else
-void FASTCALL MappedMemoryWriteWord(u32 addr, u16 val, u32 * cycle )
+void FASTCALL MappedMemoryWriteWord(u32 addr, u16 val)
 #endif
 {
-  if (cycle != NULL) { 
-    //*cycle = getMemCycle(addr); 
-    GET_MEM_CYCLE_W
-  }
    switch (addr >> 29)
    {
       case 0x0:
       case 0x1:
       case 0x4:
+      case 0x5:
       {
          // Cache/Non-Cached
          WriteWordList[(addr >> 16) & 0xFFF](addr, val);
@@ -1123,10 +971,9 @@ void FASTCALL MappedMemoryWriteWord(u32 addr, u16 val, u32 * cycle )
       }
 
       case 0x2:
-      case 0x5:
       {
-        // Purge Area
-        return;
+         // Purge Area
+         return;
       }
 
       //case 0x4:
@@ -1168,31 +1015,25 @@ void FASTCALL MappedMemoryWriteLong(u32 addr, u32 val){
 }
 void FASTCALL MappedMemoryWriteLongNocache(u32 addr, u32 val)
 #else
-void FASTCALL MappedMemoryWriteLong(u32 addr, u32 val, u32 * cycle )
+void FASTCALL MappedMemoryWriteLong(u32 addr, u32 val)
 #endif
 {
-  if (cycle != NULL) { 
-    //*cycle = getMemCycle(addr); 
-    GET_MEM_CYCLE_W
-  }
    switch (addr >> 29)
    {
       case 0x0:
       case 0x1:
       case 0x4:
+      case 0x5:
       {
          // Cache/Non-Cached
          WriteLongList[(addr >> 16) & 0xFFF](addr, val);
          return;
       }
-
       case 0x2:
-      case 0x5:
       {
-        // Purge Area
-        return;
+         // Purge Area
+         return;
       }
-
       case 0x3:
       {
          // Address Array
@@ -1233,7 +1074,7 @@ void FASTCALL MappedMemoryWriteLong(u32 addr, u32 val, u32 * cycle )
 
 //////////////////////////////////////////////////////////////////////////////
 
-int MappedMemoryLoad(const char *filename, u32 addr )
+int MappedMemoryLoad(const char *filename, u32 addr)
 {
    FILE *fp;
    long filesize;
@@ -1270,7 +1111,7 @@ int MappedMemoryLoad(const char *filename, u32 addr )
    fclose(fp);
 
    for (i = 0; i < filesize; i++)
-      MappedMemoryWriteByte(addr+i, buffer[i], NULL);
+      MappedMemoryWriteByte(addr+i, buffer[i]);
 
    free(buffer);
 
@@ -1298,7 +1139,7 @@ int MappedMemorySave(const char *filename, u32 addr, u32 size)
    }
 
    for (i = 0; i < size; i++)
-      buffer[i] = MappedMemoryReadByte(addr+i, NULL);
+      buffer[i] = MappedMemoryReadByte(addr+i);
 
    fwrite((void *)buffer, 1, size, fp);
    fclose(fp);
@@ -1485,7 +1326,7 @@ int YabSaveStateBuffer(void ** buffer, size_t * size)
 int YabSaveState(const char *filename)
 {
    FILE *fp;
-   int status = 0;
+   int status;
 
    //use a second set of savestates for movies
    filename = MakeMovieStateName(filename);
@@ -1501,7 +1342,6 @@ int YabSaveState(const char *filename)
 
    return status;
 }
-
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -1694,8 +1534,6 @@ int YabLoadStateStream(FILE *fp)
    u32 temp32;
 	int test_endian;
 
-  yabsys.frame_count = 0;
-
    headersize = 0xC;
    check.done = 0;
    check.size = 0;
@@ -1755,10 +1593,12 @@ int YabLoadStateStream(FILE *fp)
 
    // Verify version here
  
-      
+   ScspMuteAudio(SCSP_MUTE_SYSTEM);
+   
    if (StateCheckRetrieveHeader(fp, "CART", &version, &chunksize) != 0)
    {
       // Revert back to old state here
+      ScspUnMuteAudio(SCSP_MUTE_SYSTEM);
       return -3;
    }
    CartLoadState(fp, version, chunksize);
@@ -1766,6 +1606,7 @@ int YabLoadStateStream(FILE *fp)
    if (StateCheckRetrieveHeader(fp, "CS2 ", &version, &chunksize) != 0)
    {
       // Revert back to old state here
+      ScspUnMuteAudio(SCSP_MUTE_SYSTEM);
       return -3;
    }
    Cs2LoadState(fp, version, chunksize);
@@ -1773,6 +1614,7 @@ int YabLoadStateStream(FILE *fp)
    if (StateCheckRetrieveHeader(fp, "MSH2", &version, &chunksize) != 0)
    {
       // Revert back to old state here
+      ScspUnMuteAudio(SCSP_MUTE_SYSTEM);
       return -3;
    }
    SH2LoadState(MSH2, fp, version, chunksize);
@@ -1780,6 +1622,7 @@ int YabLoadStateStream(FILE *fp)
    if (StateCheckRetrieveHeader(fp, "SSH2", &version, &chunksize) != 0)
    {
       // Revert back to old state here
+      ScspUnMuteAudio(SCSP_MUTE_SYSTEM);
       return -3;
    }
    SH2LoadState(SSH2, fp, version, chunksize);
@@ -1787,6 +1630,7 @@ int YabLoadStateStream(FILE *fp)
    if (StateCheckRetrieveHeader(fp, "SCSP", &version, &chunksize) != 0)
    {
       // Revert back to old state here
+      ScspUnMuteAudio(SCSP_MUTE_SYSTEM);
       return -3;
    }
    SoundLoadState(fp, version, chunksize);
@@ -1794,6 +1638,7 @@ int YabLoadStateStream(FILE *fp)
    if (StateCheckRetrieveHeader(fp, "SCU ", &version, &chunksize) != 0)
    {
       // Revert back to old state here
+      ScspUnMuteAudio(SCSP_MUTE_SYSTEM);
       return -3;
    }
    ScuLoadState(fp, version, chunksize);
@@ -1801,6 +1646,7 @@ int YabLoadStateStream(FILE *fp)
    if (StateCheckRetrieveHeader(fp, "SMPC", &version, &chunksize) != 0)
    {
       // Revert back to old state here
+      ScspUnMuteAudio(SCSP_MUTE_SYSTEM);
       return -3;
    }
    SmpcLoadState(fp, version, chunksize);
@@ -1808,6 +1654,7 @@ int YabLoadStateStream(FILE *fp)
    if (StateCheckRetrieveHeader(fp, "VDP1", &version, &chunksize) != 0)
    {
       // Revert back to old state here
+      ScspUnMuteAudio(SCSP_MUTE_SYSTEM);
       return -3;
    }
    Vdp1LoadState(fp, version, chunksize);
@@ -1815,6 +1662,7 @@ int YabLoadStateStream(FILE *fp)
    if (StateCheckRetrieveHeader(fp, "VDP2", &version, &chunksize) != 0)
    {
       // Revert back to old state here
+      ScspUnMuteAudio(SCSP_MUTE_SYSTEM);
       return -3;
    }
    Vdp2LoadState(fp, version, chunksize);
@@ -1822,6 +1670,7 @@ int YabLoadStateStream(FILE *fp)
    if (StateCheckRetrieveHeader(fp, "OTHR", &version, &chunksize) != 0)
    {
       // Revert back to old state here
+      ScspUnMuteAudio(SCSP_MUTE_SYSTEM);
       return -3;
    }
    // Other data
@@ -1899,7 +1748,9 @@ int YabSaveStateSlot(const char *dirpath, u8 slot)
 #else
    sprintf(filename, "%s/%s_%03d.yss", dirpath, cdip->itemnum, slot);
 #endif
+   ScspMuteAudio(1);
    rtn = YabSaveState(filename);
+   ScspUnMuteAudio(1);
    return rtn;
 }
 
@@ -1918,7 +1769,9 @@ int YabLoadStateSlot(const char *dirpath, u8 slot)
 #else
    sprintf(filename, "%s/%s_%03d.yss", dirpath, cdip->itemnum, slot);
 #endif
+   ScspMuteAudio(1);
    rtn = YabLoadState(filename);
+   ScspUnMuteAudio(1);
    return rtn;
 }
 
@@ -2019,7 +1872,7 @@ static int SearchString(u32 startaddr, u32 endaddr, int searchtype,
       {
          case SEARCHSTRING:
          {
-            u8 val = MappedMemoryReadByte(addr, NULL);
+            u8 val = MappedMemoryReadByte(addr);
             addr++;
 
             if (val == buf[counter])
@@ -2037,12 +1890,12 @@ static int SearchString(u32 startaddr, u32 endaddr, int searchtype,
             int diff;
             u32 j;
             u8 val2;
-            u8 val = MappedMemoryReadByte(addr, NULL);
+            u8 val = MappedMemoryReadByte(addr);
 
             for (j = 1; j < buflen; j++)
             {
                // grab the next value
-               val2 = MappedMemoryReadByte(addr+j, NULL);
+               val2 = MappedMemoryReadByte(addr+j);
 
                // figure out the diff
                diff = (int)val2 - (int)val;
@@ -2066,12 +1919,12 @@ static int SearchString(u32 startaddr, u32 endaddr, int searchtype,
             int diff;
             u32 j;
             u16 val2;
-            u16 val = MappedMemoryReadWord(addr, NULL);
+            u16 val = MappedMemoryReadWord(addr);
 
             for (j = 1; j < buflen; j++)
             {
                // grab the next value
-               val2 = MappedMemoryReadWord(addr+(j*2), NULL);
+               val2 = MappedMemoryReadWord(addr+(j*2));
 
                // figure out the diff
                diff = (int)val2 - (int)val;
@@ -2164,7 +2017,7 @@ result_struct *MappedMemorySearch(u32 startaddr, u32 endaddr, int searchtype,
        switch (searchtype & 0x3)
        {
           case SEARCHBYTE:
-             val = MappedMemoryReadByte(addr, NULL);
+             val = MappedMemoryReadByte(addr);
              // sign extend if neccessary
              if (issigned)
                 val = (s8)val;
@@ -2173,7 +2026,7 @@ result_struct *MappedMemorySearch(u32 startaddr, u32 endaddr, int searchtype,
                 return results;
              break;
           case SEARCHWORD:
-             val = MappedMemoryReadWord(addr, NULL);
+             val = MappedMemoryReadWord(addr);
              // sign extend if neccessary
              if (issigned)
                 val = (s16)val;
@@ -2182,7 +2035,7 @@ result_struct *MappedMemorySearch(u32 startaddr, u32 endaddr, int searchtype,
                 return results;
              break;
           case SEARCHLONG:
-             val = MappedMemoryReadLong(addr, NULL);
+             val = MappedMemoryReadLong(addr);
 
              if (SearchIncrementAndCheckBounds(prevresults, maxresults, numresults, &i, addr+4, &newaddr, endaddr))
                 return results;

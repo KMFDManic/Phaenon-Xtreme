@@ -23,7 +23,6 @@ namespace Arguments
 	void autostart(const QString& param);
 	void binary(const QString& param);
 	void bios(const QString& param);
-	void syslangid(const QString& param);
 	void cdrom(const QString& param);
 	void fullscreen(const QString& param);
 	void help(const QString& param);
@@ -31,7 +30,6 @@ namespace Arguments
 	void nobios(const QString& param);
 	void nosound(const QString& param);
 	void version(const QString& param);
-  void playRecord(const QString& param);
 
 	struct Option
 	{
@@ -52,10 +50,8 @@ namespace Arguments
 		{ "-a",  "--autostart", NULL,       "Automatically start emulation.",                      1, autostart },
 		{ NULL,  "--binary=", "<FILE>[:ADDRESS]", "Use a binary file.",                           1, binary },
 		{ "-b",  "--bios=", "<BIOS>",       "Choose a bios file.",                                3, bios },
-		{ "-l",  "--language=", "<language>","Choose the system language: english, deutsch, french, spanish, italian, japanese",                     7, syslangid },
 		{ "-c",  "--cdrom=", "<CDROM>",     "Choose the cdrom device.",                           4, cdrom },
 		{ "-f",  "--fullscreen", NULL,      "Start the emulator in fullscreen.",                  5, fullscreen },
-    { "-p",  "--playrecord", "<DIR>",   "Play play record.",                  5, playRecord },
 		{ "-h",  "--help", NULL,            "Show this help and exit.",                           0, help },
 		{ "-i",  "--iso=", "<ISO>",         "Choose a dump file.",                                4, iso },
                 { "-nb", "--no-bios", NULL,         "Use the emulated bios",                              3, nobios },
@@ -66,8 +62,8 @@ namespace Arguments
 
 	void parse()
 	{
-		QVector<Option *> choosenOptions(8);
-		QVector<QString> params(8);
+		QVector<Option *> choosenOptions(7);
+		QVector<QString> params(7);
 
 		QStringList arguments = QApplication::arguments();
 		QStringListIterator argit(arguments);
@@ -94,7 +90,7 @@ namespace Arguments
 			}
 		}
 		
-		for(int i = 0;i < 8;i++)
+		for(int i = 0;i < 7;i++)
 		{
 			Option * option = choosenOptions[i];
 			if (option)
@@ -104,11 +100,6 @@ namespace Arguments
 					option->callback(QString());
 		}
 	}
-
-  void playRecord(const QString& param) {
-    VolatileSettings * vs = QtYabause::volatileSettings();
-    vs->setValue("General/RecordDir", param);
-  }
 
 	void autoframeskip(const QString& param)
 	{
@@ -150,17 +141,6 @@ namespace Arguments
 	{
 		VolatileSettings * vs = QtYabause::volatileSettings();
 		vs->setValue("General/Bios", param);
-	}
-
-	void syslangid(const QString& param)
-	{
-		VolatileSettings * vs = QtYabause::volatileSettings();
-		if (param.toLower() == "english") { vs->setValue("General/SystemLanguageID", 0); }
-		if (param.toLower() == "deutsch") { vs->setValue("General/SystemLanguageID", 1); }
-		if (param.toLower() == "french") { vs->setValue("General/SystemLanguageID", 2); }
-		if (param.toLower() == "spanish") { vs->setValue("General/SystemLanguageID", 3); }
-		if (param.toLower() == "italian") { vs->setValue("General/SystemLanguageID", 4); }
-		if (param.toLower() == "japanese") { vs->setValue("General/SystemLanguageID", 5); }
 	}
 
 	void cdrom(const QString& param)

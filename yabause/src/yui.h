@@ -29,10 +29,6 @@
 #include "vdp1.h"
 #include "yabause.h"
 
-#if defined (__cplusplus)
-extern "C"{
-#endif
-
 /* If Yabause encounters any fatal errors, it sends the error text to this function */
 void YuiErrorMsg(const char *string);
 
@@ -247,9 +243,5 @@ int YuiRevokeOGLOnThisThread();
    specified screen. It also fills a variable(isenabled) with the screen's
    current status 
 */
-
-#if defined (__cplusplus)
-}
-#endif
 
 #endif

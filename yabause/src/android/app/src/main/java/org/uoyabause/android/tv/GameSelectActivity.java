@@ -1,21 +1,3 @@
-/*  Copyright 2019 devMiyax(smiyaxdev@gmail.com)
-
-    This file is part of YabaSanshiro.
-
-    YabaSanshiro is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    YabaSanshiro is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with YabaSanshiro; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-*/
 /*
  * Copyright (C) 2014 The Android Open Source Project
  *
@@ -32,35 +14,30 @@
 
 package org.uoyabause.android.tv;
 
-import android.app.UiModeManager;
-import android.content.Context;
+import android.Manifest;
+import android.app.Activity;
 import android.content.SharedPreferences;
-import android.content.res.Configuration;
-import android.os.Build;
+import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
-
-import androidx.annotation.NonNull;
-import androidx.fragment.app.FragmentActivity;
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.util.Log;
 import android.view.InputDevice;
 import android.view.KeyEvent;
+import android.view.View;
 
-import org.uoyabause.android.phone.GameSelectFragmentPhone;
-import org.uoyabause.uranus.R;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.firebase.iid.FirebaseInstanceId;
 
-import androidx.tvprovider.media.tv.Channel;
-import androidx.tvprovider.media.tv.TvContractCompat;
-import androidx.tvprovider.media.tv.ChannelLogoUtils;
-import androidx.tvprovider.media.tv.PreviewProgram;
-import androidx.tvprovider.media.tv.WatchNextProgram;
-
-import static androidx.tvprovider.media.tv.ChannelLogoUtils.storeChannelLogo;
+import org.uoyabause.android.R;
 
 /*
  * MainActivity class that loads MainFragment
  */
-public class GameSelectActivity extends FragmentActivity {
+public class GameSelectActivity extends Activity {
     /**
      * Called when the activity is first created.
      */
@@ -69,65 +46,32 @@ public class GameSelectActivity extends FragmentActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean lock_landscape = sharedPref.getBoolean("pref_landscape", false);
+        if( lock_landscape == true ){
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        }else{
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+        }
+
         super.onCreate(savedInstanceState);
 
+        GoogleApiAvailability googleAPI = GoogleApiAvailability.getInstance();
+        int resultCode = googleAPI.isGooglePlayServicesAvailable(this);
+
+        if (resultCode != ConnectionResult.SUCCESS) {
+            Log.e(TAG, "This device is not supported.");
+        }
+
+        Log.d(TAG, "InstanceID token: " + FirebaseInstanceId.getInstance().getToken());
+
         setContentView(R.layout.activity_game_select);
-
-        UiModeManager uiModeManager = (UiModeManager) getSystemService(Context.UI_MODE_SERVICE);
-        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-                uiModeManager.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION ) {
-
-            new Thread(new Runnable() {
-                public void run(){
-                    Subscription subscription = Subscription.createSubscription("RECENT","recent played games", "saturngame://yabasanshiro/", R.mipmap.ic_launcher );
-                    long channelId = TvUtil.createChannel(GameSelectActivity.this,subscription);
-                    TvUtil.syncPrograms(GameSelectActivity.this,channelId);
-                }
-            }).start();
-
-        }
-        else {
-            // Use the recommendations row API
-        }
-
-
-/*
-        SharedPreferences prefs = getSharedPreferences("private", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putBoolean("donated", false);
-        editor.apply();
-*/
-        //CheckDonated();
-
     }
-
-    @Override
-    public void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-
-    }
-
-    GameSelectFragmentPhone frg_ = null;
 
     @Override
     public void onResume(){
         super.onResume();
-    }
-
-    @Override
-    public void onStop(){
-        super.onStop();
-        UiModeManager uiModeManager = (UiModeManager) getSystemService(Context.UI_MODE_SERVICE);
-        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-                uiModeManager.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION ) {
-
-            Subscription subscription = Subscription.createSubscription("RECENT","recent played games", "saturngame://yabasanshiro/", R.mipmap.ic_launcher );
-            long channelId = TvUtil.createChannel(this,subscription);
-            TvUtil.syncPrograms(this,channelId);
-        }
-        else {
-            // Use the recommendations row API
-        }
     }
 
     @Override
@@ -142,6 +86,4 @@ public class GameSelectActivity extends FragmentActivity {
         }
         return super.dispatchKeyEvent(event);
     }
-
-
 }

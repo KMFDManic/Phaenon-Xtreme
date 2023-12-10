@@ -21,7 +21,6 @@
 
 #include "ui_UIHexInput.h"
 #include "../QtYabause.h"
-#include <QValidator>
 
 class HexValidator : public QValidator
 {

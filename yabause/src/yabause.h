@@ -18,25 +18,6 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
-/*
-        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
-
-This file is part of YabaSanshiro.
-
-        YabaSanshiro is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-YabaSanshiro is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-        You should have received a copy of the GNU General Public License
-along with YabaSanshiro; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-*/
 
 #ifndef YABAUSE_H
 #define YABAUSE_H
@@ -57,7 +38,6 @@ typedef struct
    int cdcoretype;
    int carttype;
    u8 regionid;
-   int syslanguageid;
    const char *biospath;
    const char *cdpath;
    const char *ssfpath;
@@ -86,7 +66,6 @@ typedef struct
    int scsp_sync_count_per_frame;
    int scsp_main_mode;
    u32 sync_shift;
-   const char *playRecordPath;
 } yabauseinit_struct;
 
 #define CLKTYPE_26MHZ           0
@@ -168,13 +147,6 @@ int VideoSetSetting(int type, int value);
 
 int yprintf( const char * fmt, ... );
 
-
-int YabauseThread_IsUseBios();
-const char * YabauseThread_getBackupPath();
-void YabauseThread_setUseBios(int use);
-void YabauseThread_setBackupPath(const char * buf);
-void YabauseThread_coldBoot();
-void YabauseThread_resetPlaymode();
 
 #ifdef __cplusplus
 }

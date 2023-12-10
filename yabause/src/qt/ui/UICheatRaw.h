@@ -20,7 +20,8 @@
 #define UICHEATRAW_H
 
 #include "ui_UICheatRaw.h"
-#include <QButtonGroup>
+
+class QButtonGroup;
 
 class UICheatRaw : public QDialog, public Ui::UICheatRaw
 {

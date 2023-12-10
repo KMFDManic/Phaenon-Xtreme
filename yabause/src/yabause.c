@@ -18,25 +18,6 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
-/*
-        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
-
-This file is part of YabaSanshiro.
-
-        YabaSanshiro is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-YabaSanshiro is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-        You should have received a copy of the GNU General Public License
-along with YabaSanshiro; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-*/
 
 /*! \file yabause.c
     \brief Yabause main emulation functions and interface for the ports
@@ -143,13 +124,11 @@ void print_usage(const char *program_name) {
           "Usage: %s [OPTIONS]...\n", program_name);
    printf("   -h         --help                 Print help and exit\n");
    printf("   -b STRING  --bios=STRING          bios file\n");
-   printf("   -l STRING  --language=STRING      english, deutsch, french, spanish,\n                                     italian, japanese\n");
    printf("   -i STRING  --iso=STRING           iso/cue file\n");
    printf("   -c STRING  --cdrom=STRING         cdrom path\n");
    printf("   -ns        --nosound              turn sound off\n");
    printf("   -a         --autostart            autostart emulation\n");
    printf("   -f         --fullscreen           start in fullscreen mode\n");
-   printf("   -r DIR     --playrecord           play play record\n");
 }
 #endif
 
@@ -187,13 +166,6 @@ int YabauseInit(yabauseinit_struct *init)
   q_scsp_finish = YabThreadCreateQueue(1);
   setM68kCounter(0);
 
-#if !(defined(__LIBRETRO__))
-  if( init->playRecordPath && strlen(init->playRecordPath) != 0) {
-    PlayRecorder_setPlayMode(init->playRecordPath,init);
-  }
-#endif
-
-   yabsys.frame_count = 0;
    yabsys.sync_shift = init->sync_shift;
 
    // Need to set this first, so init routines see it
@@ -328,7 +300,7 @@ int YabauseInit(yabauseinit_struct *init)
       return -1;
    }
 
-   if (SmpcInit(init->regionid, init->syslanguageid, init->clocksync, init->basetime) != 0)
+   if (SmpcInit(init->regionid, init->clocksync, init->basetime) != 0)
    {
       YabSetError(YAB_ERR_CANNOTINIT, _("SMPC"));
       return -1;
@@ -365,9 +337,6 @@ int YabauseInit(yabauseinit_struct *init)
    else {
      yabsys.emulatebios = 1;
      T2WriteLong(BiosRom, 0x04, 0x06002000); // set base stack pointer
-     T2WriteByte(BiosRom,0x00000013, 0x22);  // patch for SAKURA TAISEN
-     T2WriteLong(BiosRom,0x00000018, 0x20000222); // patch for SAKURA TAISEN
-     T2WriteLong(BiosRom,0x00000220, 0x277AAFFE); // patch for SAKURA TAISEN
    }
 
    yabsys.usequickload = 0;
@@ -544,8 +513,6 @@ void YabauseReset(void) {
    if (yabsys.playing_ssf)
       yabsys.playing_ssf = 0;
 
-   yabsys.frame_count = 0;
-
    YabauseResetNoLoad();
 
    if (yabsys.usequickload || yabsys.emulatebios)
@@ -576,8 +543,6 @@ int YabauseExec(void) {
 	//automatically advance lag frames, this should be optional later
 	//if (FrameAdvanceVariable > 0 && LagFrameFlag == 1){ 
 		//FrameAdvanceVariable = NeedAdvance; //advance a frame
-
-
 		YabauseEmulate();
 		//FrameAdvanceVariable = Paused; //pause next time
 		return(0);
@@ -645,10 +610,6 @@ int YabauseEmulate(void) {
    int oneframeexec = 0;
    yabsys.frame_count++;
 
-#if !defined(__LIBRETRO__)
-   PlayRecorder_proc(yabsys.frame_count);
-#endif
-
    const u32 cyclesinc =
       yabsys.DecilineMode ? yabsys.DecilineStop : yabsys.DecilineStop * 10;
    const u32 usecinc =
@@ -711,10 +672,8 @@ int YabauseEmulate(void) {
 
    MSH2->cycles = 0;
    MSH2->depth = 0;
-   MSH2->pre_cycle = 0;
    SSH2->cycles = 0;
    SSH2->depth = 0;
-   SSH2->pre_cycle = 0;
    SH2OnFrame(MSH2);
    SH2OnFrame(SSH2);
    u64 cpu_emutime = 0;
@@ -775,9 +734,7 @@ int YabauseEmulate(void) {
          PROFILE_STOP("SCSP");
          yabsys.DecilineCount = 0;
          yabsys.LineCount++;
-
          if (yabsys.LineCount == yabsys.VBlankLineCount) {
-
 #if defined(ASYNC_SCSP)
             setM68kCounter((u64)(44100 * 256 / 60) << SCSP_FRACTIONAL_BITS);
 #endif
@@ -799,7 +756,6 @@ int YabauseEmulate(void) {
             yabsys.LineCount = 0;
             oneframeexec = 1;
             PROFILE_STOP("VDP1/VDP2");
-
          }
       }
 
@@ -917,31 +873,31 @@ void YabauseStartSlave(void) {
    if (yabsys.emulatebios)
    {
       CurrentSH2 = SSH2;
-      MappedMemoryWriteLong(0xFFFFFFE0, 0xA55A03F1, NULL); // BCR1
-      MappedMemoryWriteLong(0xFFFFFFE4, 0xA55A00FC, NULL); // BCR2
-      MappedMemoryWriteLong(0xFFFFFFE8, 0xA55A5555, NULL); // WCR
-      MappedMemoryWriteLong(0xFFFFFFEC, 0xA55A0070, NULL); // MCR
+      MappedMemoryWriteLong(0xFFFFFFE0, 0xA55A03F1); // BCR1
+      MappedMemoryWriteLong(0xFFFFFFE4, 0xA55A00FC); // BCR2
+      MappedMemoryWriteLong(0xFFFFFFE8, 0xA55A5555); // WCR
+      MappedMemoryWriteLong(0xFFFFFFEC, 0xA55A0070); // MCR
 
-      MappedMemoryWriteWord(0xFFFFFEE0, 0x0000, NULL); // ICR
-      MappedMemoryWriteWord(0xFFFFFEE2, 0x0000, NULL); // IPRA
-      MappedMemoryWriteWord(0xFFFFFE60, 0x0F00, NULL); // VCRWDT
-      MappedMemoryWriteWord(0xFFFFFE62, 0x6061, NULL); // VCRA
-      MappedMemoryWriteWord(0xFFFFFE64, 0x6263, NULL); // VCRB
-      MappedMemoryWriteWord(0xFFFFFE66, 0x6465, NULL); // VCRC
-      MappedMemoryWriteWord(0xFFFFFE68, 0x6600, NULL); // VCRD
-      MappedMemoryWriteWord(0xFFFFFEE4, 0x6869, NULL); // VCRWDT
-      MappedMemoryWriteLong(0xFFFFFFA8, 0x0000006C, NULL); // VCRDMA1
-      MappedMemoryWriteLong(0xFFFFFFA0, 0x0000006D, NULL); // VCRDMA0
-      MappedMemoryWriteLong(0xFFFFFF0C, 0x0000006E, NULL); // VCRDIV
-      MappedMemoryWriteLong(0xFFFFFE10, 0x00000081, NULL); // TIER
+      MappedMemoryWriteWord(0xFFFFFEE0, 0x0000); // ICR
+      MappedMemoryWriteWord(0xFFFFFEE2, 0x0000); // IPRA
+      MappedMemoryWriteWord(0xFFFFFE60, 0x0F00); // VCRWDT
+      MappedMemoryWriteWord(0xFFFFFE62, 0x6061); // VCRA
+      MappedMemoryWriteWord(0xFFFFFE64, 0x6263); // VCRB
+      MappedMemoryWriteWord(0xFFFFFE66, 0x6465); // VCRC
+      MappedMemoryWriteWord(0xFFFFFE68, 0x6600); // VCRD
+      MappedMemoryWriteWord(0xFFFFFEE4, 0x6869); // VCRWDT
+      MappedMemoryWriteLong(0xFFFFFFA8, 0x0000006C); // VCRDMA1
+      MappedMemoryWriteLong(0xFFFFFFA0, 0x0000006D); // VCRDMA0
+      MappedMemoryWriteLong(0xFFFFFF0C, 0x0000006E); // VCRDIV
+      MappedMemoryWriteLong(0xFFFFFE10, 0x00000081); // TIER
       CurrentSH2 = MSH2;
 
       SH2GetRegisters(SSH2, &SSH2->regs);
       SSH2->regs.R[15] = Cs2GetSlaveStackAdress();
       SSH2->regs.VBR = 0x06000400;
-      SSH2->regs.PC = MappedMemoryReadLong(0x06000250, NULL);
-      if (MappedMemoryReadLong(0x060002AC, NULL) != 0)
-         SSH2->regs.R[15] = MappedMemoryReadLong(0x060002AC, NULL);
+      SSH2->regs.PC = MappedMemoryReadLong(0x06000250);
+      if (MappedMemoryReadLong(0x060002AC) != 0)
+         SSH2->regs.R[15] = MappedMemoryReadLong(0x060002AC);
 
       SSH2->regs.SR.part.I = 0;
       SH2SetRegisters(SSH2, &SSH2->regs);
@@ -1033,46 +989,46 @@ void YabauseSpeedySetup(void)
       // Setup the vector table area, etc.(all bioses have it at 0x00000600-0x00000810)
       for (i = 0; i < 0x210; i+=4)
       {
-         data = MappedMemoryReadLong(0x00000600+i, NULL);
-         MappedMemoryWriteLong(0x06000000+i, data, NULL);
+         data = MappedMemoryReadLong(0x00000600+i);
+         MappedMemoryWriteLong(0x06000000+i, data);
       }
 
       // Setup the bios function pointers, etc.(all bioses have it at 0x00000820-0x00001100)
       for (i = 0; i < 0x8E0; i+=4)
       {
-         data = MappedMemoryReadLong(0x00000820+i, NULL);
-         MappedMemoryWriteLong(0x06000220+i, data, NULL);
+         data = MappedMemoryReadLong(0x00000820+i);
+         MappedMemoryWriteLong(0x06000220+i, data);
       }
 
       // I'm not sure this is really needed
       for (i = 0; i < 0x700; i+=4)
       {
-         data = MappedMemoryReadLong(0x00001100+i, NULL);
-         MappedMemoryWriteLong(0x06001100+i, data, NULL);
+         data = MappedMemoryReadLong(0x00001100+i);
+         MappedMemoryWriteLong(0x06001100+i, data);
       }
 
       // Fix some spots in 0x06000210-0x0600032C area
-      MappedMemoryWriteLong(0x06000234, 0x000002AC, NULL);
-      MappedMemoryWriteLong(0x06000238, 0x000002BC, NULL);
-      MappedMemoryWriteLong(0x0600023C, 0x00000350, NULL);
-      MappedMemoryWriteLong(0x06000240, 0x32524459, NULL);
-      MappedMemoryWriteLong(0x0600024C, 0x00000000, NULL);
-      MappedMemoryWriteLong(0x06000268, MappedMemoryReadLong(0x00001344, NULL), NULL);
-      MappedMemoryWriteLong(0x0600026C, MappedMemoryReadLong(0x00001348, NULL), NULL);
-      MappedMemoryWriteLong(0x0600029C, MappedMemoryReadLong(0x00001354, NULL), NULL);
-      MappedMemoryWriteLong(0x060002C4, MappedMemoryReadLong(0x00001104, NULL), NULL);
-      MappedMemoryWriteLong(0x060002C8, MappedMemoryReadLong(0x00001108, NULL), NULL);
-      MappedMemoryWriteLong(0x060002CC, MappedMemoryReadLong(0x0000110C, NULL), NULL);
-      MappedMemoryWriteLong(0x060002D0, MappedMemoryReadLong(0x00001110, NULL), NULL);
-      MappedMemoryWriteLong(0x060002D4, MappedMemoryReadLong(0x00001114, NULL), NULL);
-      MappedMemoryWriteLong(0x060002D8, MappedMemoryReadLong(0x00001118, NULL), NULL);
-      MappedMemoryWriteLong(0x060002DC, MappedMemoryReadLong(0x0000111C, NULL), NULL);
-      MappedMemoryWriteLong(0x06000328, 0x000004C8, NULL);
-      MappedMemoryWriteLong(0x0600032C, 0x00001800, NULL);
+      MappedMemoryWriteLong(0x06000234, 0x000002AC);
+      MappedMemoryWriteLong(0x06000238, 0x000002BC);
+      MappedMemoryWriteLong(0x0600023C, 0x00000350);
+      MappedMemoryWriteLong(0x06000240, 0x32524459);
+      MappedMemoryWriteLong(0x0600024C, 0x00000000);
+      MappedMemoryWriteLong(0x06000268, MappedMemoryReadLong(0x00001344));
+      MappedMemoryWriteLong(0x0600026C, MappedMemoryReadLong(0x00001348));
+      MappedMemoryWriteLong(0x0600029C, MappedMemoryReadLong(0x00001354));
+      MappedMemoryWriteLong(0x060002C4, MappedMemoryReadLong(0x00001104));
+      MappedMemoryWriteLong(0x060002C8, MappedMemoryReadLong(0x00001108));
+      MappedMemoryWriteLong(0x060002CC, MappedMemoryReadLong(0x0000110C));
+      MappedMemoryWriteLong(0x060002D0, MappedMemoryReadLong(0x00001110));
+      MappedMemoryWriteLong(0x060002D4, MappedMemoryReadLong(0x00001114));
+      MappedMemoryWriteLong(0x060002D8, MappedMemoryReadLong(0x00001118));
+      MappedMemoryWriteLong(0x060002DC, MappedMemoryReadLong(0x0000111C));
+      MappedMemoryWriteLong(0x06000328, 0x000004C8);
+      MappedMemoryWriteLong(0x0600032C, 0x00001800);
 
       // Fix SCU interrupts
       for (i = 0; i < 0x80; i+=4)
-         MappedMemoryWriteLong(0x06000A00+i, 0x0600083C, NULL);
+         MappedMemoryWriteLong(0x06000A00+i, 0x0600083C);
    }
 
    // Set the cpu's, etc. to sane states
@@ -1212,12 +1168,12 @@ int YabauseQuickLoadGame(void)
          if (size >= 2048)
          {
             for (i2 = 0; i2 < 2048; i2++)
-               MappedMemoryWriteByte(0x06002000 + (i * 0x800) + i2, buffer[i2], NULL);
+               MappedMemoryWriteByte(0x06002000 + (i * 0x800) + i2, buffer[i2]);
          }
          else
          {
             for (i2 = 0; i2 < size; i2++)
-               MappedMemoryWriteByte(0x06002000 + (i * 0x800) + i2, buffer[i2], NULL);
+               MappedMemoryWriteByte(0x06002000 + (i * 0x800) + i2, buffer[i2]);
          }
 
          size -= 2048;
@@ -1284,12 +1240,12 @@ int YabauseQuickLoadGame(void)
          if (size >= 2048)
          {
             for (i2 = 0; i2 < 2048; i2++)
-               MappedMemoryWriteByte(addr + (i * 0x800) + i2, buffer[i2], NULL);
+               MappedMemoryWriteByte(addr + (i * 0x800) + i2, buffer[i2]);
          }
          else
          {
             for (i2 = 0; i2 < size; i2++)
-               MappedMemoryWriteByte(addr + (i * 0x800) + i2, buffer[i2], NULL);
+               MappedMemoryWriteByte(addr + (i * 0x800) + i2, buffer[i2]);
          }
 
          size -= 2048;
@@ -1306,7 +1262,6 @@ int YabauseQuickLoadGame(void)
       // Now setup SH2 registers to start executing at ip code
       SH2GetRegisters(MSH2, &MSH2->regs);
       MSH2->onchip.VCRC = 0x64 << 8;
-      MSH2->onchip.VCRWDT = 0x6869;
       MSH2->onchip.IPRB = 0x0F00;
       MSH2->regs.PC = 0x06002E00;
       MSH2->regs.R[15] = Cs2GetMasterStackAdress();

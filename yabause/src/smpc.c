@@ -17,25 +17,6 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
-/*
-        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
-
-This file is part of YabaSanshiro.
-
-        YabaSanshiro is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-YabaSanshiro is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-        You should have received a copy of the GNU General Public License
-along with YabaSanshiro; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-*/
 
 /*! \file smpc.c
     \brief SMPC emulation functions.
@@ -64,14 +45,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 Smpc * SmpcRegs;
 u8 * SmpcRegsT;
-SmpcInternal * SmpcInternalVars = NULL;
+SmpcInternal * SmpcInternalVars;
 int intback_wait_for_line = 0;
 u8 bustmp = 0;
-int syslngid = 0;
 
 //////////////////////////////////////////////////////////////////////////////
 
-int SmpcInit(u8 regionid, int syslanguageid, int clocksync, u32 basetime) {
+int SmpcInit(u8 regionid, int clocksync, u32 basetime) {
    if ((SmpcRegsT = (u8 *) calloc(1, sizeof(Smpc))) == NULL)
       return -1;
  
@@ -82,17 +62,10 @@ int SmpcInit(u8 regionid, int syslanguageid, int clocksync, u32 basetime) {
   
    SmpcInternalVars->regionsetting = regionid;
    SmpcInternalVars->regionid = regionid;
-   SmpcInternalVars->syslanguageid = syslanguageid;
    SmpcInternalVars->clocksync = clocksync;
    SmpcInternalVars->basetime = basetime ? basetime : time(NULL);
 
    return 0;
-}
-
-int SmpcSetClockSync(int clocksync, u32 basetime) {
-  if (SmpcInternalVars == NULL) return -1;
-  SmpcInternalVars->clocksync = clocksync;
-  SmpcInternalVars->basetime = basetime ? basetime : time(NULL);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -131,21 +104,7 @@ void SmpcRecheckRegion(void) {
 
 void SmpcReset(void) {
    memset((void *)SmpcRegs, 0, sizeof(Smpc));
-   syslngid = SmpcInternalVars->syslanguageid;
-   memset((void *)SmpcInternalVars->SMEM, syslngid, 4); // Language : 0=English - 1=Deutsch - 2=French - 3=Spanish - 4=Italian - 5=Japanese
-   memset((void *)SmpcInternalVars->SMEM, 0, 3); // Other Settings - MUST BE DECLARED! - By default : 0 = Button Labels=Enabled + Audio=Stereo + Sound Effects=Enabled
-
-   //   Other Settings Configuration Information :
-   //
-   // |-------------------------------------------------------------------------------------------------------|
-   // |  Settings     | Bit / Settings Value                                                                  |
-   // |               |---------------------------------------------------------------------------------------|
-   // |    Name       |   0      |  1       |   2       |  3       |  4       |  5       |  6       |  7      |
-   // |-------------------------------------------------------------------------------------------------------|
-   // | Button Labels |  Enabled | Enabled  | Enabled  | Enabled  | Disabled | Disabled | Disabled | Disabled |
-   // | Audio         |  Stereo  | Stereo   | Mono     | Mono     | Stereo   | Stereo   | Mono     | Mono     |
-   // | Sound Effects |  Enabled | Disabled | Enabled  | Disabled | Enabled  | Disabled | Enabled  | Disabled |
-   // |-------------------------------------------------------------------------------------------------------|
+   memset((void *)SmpcInternalVars->SMEM, 0, 4);
 
    SmpcRecheckRegion();
 
@@ -269,7 +228,7 @@ static void SmpcINTBACKStatus(void) {
     
    // write time data in OREG1-7
    if (SmpcInternalVars->clocksync) {
-      tmp = SmpcInternalVars->basetime + ((u64)yabsys.frame_count * 1001 / 60000);
+      tmp = SmpcInternalVars->basetime + ((u64)framecounter * 1001 / 60000);
    } else {
       tmp = time(NULL);
    }

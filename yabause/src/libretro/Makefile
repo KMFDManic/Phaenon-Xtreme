@@ -52,7 +52,7 @@ endif
 
 CORE_DIR := .
 
-TARGET_NAME = yabasanshiro
+TARGET_NAME = km_phaenon_xtreme_amped
 CC_AS ?= $(CC)
 
 # Unix

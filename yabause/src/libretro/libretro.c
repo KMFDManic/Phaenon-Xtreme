@@ -653,11 +653,11 @@ static struct retro_system_av_info g_av_info;
 void retro_get_system_info(struct retro_system_info *info)
 {
    memset(info, 0, sizeof(*info));
-   info->library_name     = "YabaSanshiro";
+   info->library_name     = "Phaenon Xtreme Amped";
 #ifndef GIT_VERSION
 #define GIT_VERSION ""
 #endif
-   info->library_version  = "v" VERSION GIT_VERSION;
+   info->library_version  = "2K23";
    info->need_fullpath    = true;
    info->block_extract    = true;
    info->valid_extensions = "cue|iso|mds|ccd|chd";
@@ -969,14 +969,14 @@ bool retro_load_game_common()
    yinit.frameskip                 = g_frame_skip;
    yinit.rbg_resolution_mode       = g_rbg_resolution_mode;
    yinit.rbg_use_compute_shader    = g_rbg_use_compute_shader;
-   yinit.usethreads                = 0;
+   yinit.usethreads                = 1;
    yinit.rotate_screen             = 0;
    yinit.skip_load                 = 0;
    yinit.polygon_generation_mode   = polygon_mode;
    yinit.extend_backup             = 0;
    yinit.buppath                   = bup_path;
    yinit.use_new_scsp              = 1;
-   yinit.scsp_sync_count_per_frame = 1;
+   yinit.scsp_sync_count_per_frame = 0;
    yinit.extend_backup             = 1;
    yinit.scsp_main_mode            = 1;
    yinit.videoformattype           = VIDEOFORMATTYPE_NTSC;
@@ -995,8 +995,8 @@ bool retro_load_game(const struct retro_game_info *info)
    switch(resolution_mode)
    {
       case RES_ORIGINAL:
-         max_width = 704;
-         max_height = 512;
+         max_width = 640;
+         max_height = 224;
          break;
       case RES_4x:
          max_width = 704 * 4;
@@ -1346,7 +1346,6 @@ void reset_global_gl_state()
 void retro_run(void)
 {
    unsigned i;
-   bool fastforward = false;
    bool updated  = false;
    rendering_started = true;
    one_frame_rendered = false;
@@ -1361,14 +1360,10 @@ void retro_run(void)
       VIDCore->SetSettingValue(VDP_SETTING_RBG_USE_COMPUTESHADER, g_rbg_use_compute_shader);
       if(PERCore && (prev_multitap[0] != multitap[0] || prev_multitap[1] != multitap[1]))
          PERCore->Init();
-   }
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_FASTFORWARDING, &fastforward) && fastforward)
-   {
-      if (g_frame_skip == 1 && !fastforward)
+if(g_frame_skip == 1)
          EnableAutoFrameSkip();
       else
-         DisableAutoFrameSkip();
+         EnableAutoFrameSkip();
    }
 
    //YabauseExec(); runs from handle events

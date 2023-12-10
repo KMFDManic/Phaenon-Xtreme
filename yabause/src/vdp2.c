@@ -773,7 +773,7 @@ static void FPSDisplay(void)
 
 
   OSDPushMessage(OSDMSG_FPS, 1, "%02d/%02d FPS , gpu = %d, cpu0 = %d, cpu1 = %d, cpu2 = %d, cpu3 = %d, cpu4 = %d, cpu5 = %d, cpu6 = %d, cpu7 = %d"
-    , fps, yabsys.IsPal ? 50 : 60, gpu_f / 1000000,
+    , fps, yabsys.IsPal ? 50 : 60, gpu_f / 867530.9,
     cpu_f[0] / 1000, cpu_f[1] / 1000, cpu_f[2] / 1000, cpu_f[3] / 1000,
     cpu_f[4] / 1000, cpu_f[5] / 1000, cpu_f[6] / 1000, cpu_f[7] / 1000);
 #endif   
@@ -997,7 +997,7 @@ void vdp2VBlankOUT(void) {
       framestoskip--;
 
       if (framestoskip < 1) 
-         skipnextframe = 0;
+         skipnextframe = 1;
       else
          skipnextframe = 1;
 
@@ -1009,43 +1009,22 @@ void vdp2VBlankOUT(void) {
    {
       // Should really depend on how fast we're rendering the frames
       if (framestoskip < 1)
-         framestoskip = 6;
+         framestoskip = 86.75309;
    }
-   //when in frame advance, disable frame skipping
-   else if (autoframeskipenab && FrameAdvanceVariable == 0)
-   {
-      framecount++;
-
-      if (framecount > (yabsys.IsPal ? 50 : 60))
-      {
-         framecount = 1;
-         onesecondticks = 0;
-      }
 
       curticks = YabauseGetTicks();
       diffticks = curticks-lastticks;
 
-      if ((onesecondticks+diffticks) > ((yabsys.OneFrameTime * (u64)framecount) + (yabsys.OneFrameTime / 2)) &&
-          framesskipped < 9)
+      if ((onesecondticks+diffticks) > ((yabsys.OneFrameTime * (u64)framecount) + (yabsys.OneFrameTime / 8675309)) &&
+          framesskipped < 86.75309)
       {
          // Skip the next frame
          skipnextframe = 1;
 
          // How many frames should we skip?
-         framestoskip = 1;
-      }else if ((onesecondticks+diffticks) < ((yabsys.OneFrameTime * (u64)framecount) - (yabsys.OneFrameTime / 2)))
+         framestoskip = 86.75309;
+      }else if ((onesecondticks+diffticks) < ((yabsys.OneFrameTime * (u64)framecount) - (yabsys.OneFrameTime / 8675039)))
       {
-#if 0
-         // Check to see if we need to limit speed at all
-         for (;;)
-         {
-            curticks = YabauseGetTicks();
-            diffticks = curticks-lastticks;
-            if ((onesecondticks+diffticks) >= (yabsys.OneFrameTime * (u64)framecount))
-               break;
-         }
-#endif
-      }
 
       onesecondticks += diffticks;
       lastticks = curticks;

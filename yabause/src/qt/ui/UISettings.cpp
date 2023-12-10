@@ -51,6 +51,14 @@ struct Item
 
 typedef QList<Item> Items;
 
+const Items mSysLanguageID = Items()
+	<< Item( "0", "English" )
+	<< Item( "1", "Deutsch" )
+	<< Item( "2", "French" )
+	<< Item( "3", "Spanish" )
+	<< Item( "4", "Italian" )
+	<< Item( "5", "Japanese" );
+
 const Items mRegions = Items()
 	<< Item( "Auto" , "Auto-detect" )
 	<< Item( "J" , "Japan (NTSC)" )
@@ -373,6 +381,10 @@ void UISettings::loadCores()
 	foreach ( const Item& it, mRegions )
 		cbRegion->addItem( QtYabause::translate( it.Name ), it.id );
 	
+	// System Language
+	foreach ( const Item& it, mSysLanguageID  )
+		cbSysLanguageID ->addItem( QtYabause::translate( it.Name ), it.id );
+	
 	// SH2 Interpreters
 	for ( int i = 0; SH2CoreList[i] != NULL; i++ )
 		cbSH2Interpreter->addItem( QtYabause::translate( SH2CoreList[i]->Name ), SH2CoreList[i]->id );
@@ -381,9 +393,10 @@ void UISettings::loadCores()
    for (int i = 0; M68KCoreList[i] != NULL; i++)
       cb68kCore->addItem(QtYabause::translate(M68KCoreList[i]->Name), M68KCoreList[i]->id);
 
-	cbAspectRatio->addItem( QtYabause::translate( "Fit to window" ), 0 );
+  cbAspectRatio->addItem(QtYabause::translate("Original aspect ratio"), 0);
 	cbAspectRatio->addItem( QtYabause::translate( "Fixed aspect ratio: 4:3" ), 1 );
 	cbAspectRatio->addItem( QtYabause::translate( "Fixed aspect ratio: 16:9" ), 2 );
+  cbAspectRatio->addItem(QtYabause::translate("Fit to window"), 3);
 }
 
 void UISettings::loadSupportedResolutions()
@@ -470,6 +483,7 @@ void UISettings::loadSettings()
 		cbCdDrive->setCurrentIndex(leCdRom->text().isEmpty() ? 0 : cbCdDrive->findText(leCdRom->text()));
 
 	leSaveStates->setText( s->value( "General/SaveStates", getDataDirPath() ).toString() );
+	cbSysLanguageID->setCurrentIndex( cbSysLanguageID->findData( s->value( "General/SystemLanguageID", mSysLanguageID.at( 0 ).id ).toString() ) );
 #ifdef HAVE_LIBMINI18N
 	int i;
 	if ((i=cbTranslation->findData(s->value( "General/Translation" ).toString())) != -1)
@@ -501,9 +515,9 @@ void UISettings::loadSettings()
 	cbOSDCore->setCurrentIndex( cbOSDCore->findData( s->value( "Video/OSDCore", QtYabause::defaultOSDCore().id ).toInt() ) );
 #endif
 
-	cbAspectRatio->setCurrentIndex( s->value( "Video/AspectRatio", 1 ).toInt() );
-	leWinWidth->setText( s->value( "Video/WindowWidth", s->value( "Video/Width", 640 ) ).toString() );
-	leWinHeight->setText( s->value( "Video/WindowHeight", s->value( "Video/Height", 480 ) ).toString() );
+	cbAspectRatio->setCurrentIndex( s->value( "Video/AspectRatio", 0 ).toInt() );
+	leWinWidth->setText( s->value( "Video/WindowWidth", s->value( "Video/Width", 800 ) ).toString() );
+	leWinHeight->setText( s->value( "Video/WindowHeight", s->value( "Video/Height", 600 ) ).toString() );
 	QString text = QString("%1x%2").arg(s->value( "Video/FullscreenWidth", s->value( "Video/Width", 1920 ) ).toString(),
 										s->value( "Video/FullscreenHeight", s->value( "Video/Height", 1080 ) ).toString());	
 	cbFullscreenResolution->setCurrentIndex(cbFullscreenResolution->findText(text));
@@ -578,6 +592,7 @@ void UISettings::saveSettings()
 	else
 		s->setValue( "General/CdRomISO", leCdRom->text() );
 	s->setValue( "General/SaveStates", leSaveStates->text() );
+	s->setValue( "General/SystemLanguageID", cbSysLanguageID->itemData( cbSysLanguageID->currentIndex() ).toString() );
 #ifdef HAVE_LIBMINI18N
 	s->setValue( "General/Translation", cbTranslation->itemData(cbTranslation->currentIndex()).toString() );
 #endif

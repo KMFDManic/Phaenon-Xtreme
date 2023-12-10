@@ -18,6 +18,25 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+This file is part of YabaSanshiro.
+
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
 
 /*! \file cdbase.c
     \brief Dummy and ISO, BIN/CUE, MDS CD Interfaces
@@ -1477,37 +1496,59 @@ static int ISOCDInit(const char * iso) {
 
    num_read = fread((void *)header, 1, 6, iso_file);
    ext = strrchr(iso, '.');
+   if (ext == NULL) {
+     // read header
+     if (checkCHD(iso) == 0) {
+       imgtype = IMG_CHD;
+       ret = LoadCHD(iso, iso_file);
+     }
+     else {
+       // Assume it's an ISO file
+       imgtype = IMG_ISO;
+       ret = LoadISO(iso_file);
+     }
 
-   // Figure out what kind of image format we're dealing with
-   if (stricmp(ext, ".CUE") == 0 )
-   {
-     // It's a Single BIN/CUE
-     imgtype = IMG_BINCUE;
-     ret = LoadBinCue(iso, iso_file);
    }
-   else if (stricmp(ext, ".MDS") == 0 && strncmp(header, "MEDIA ", sizeof(header)) == 0)
-   {
-      // It's a MDS
-      imgtype = IMG_MDS;
-      ret = LoadMDS(iso, iso_file);
-   }
-	else if (stricmp(ext, ".CCD") == 0)
-	{
-		// It's a CCD
-		imgtype = IMG_CCD;
-		ret = LoadCCD(iso, iso_file);
-	}
-  else if (stricmp(ext, ".CHD") == 0)
-  {
-    // It's a CCD
-    imgtype = IMG_CHD;
-    ret = LoadCHD(iso, iso_file);
-  }
-   else
-   {
-      // Assume it's an ISO file
-      imgtype = IMG_ISO;
-      ret = LoadISO(iso_file);
+   else {
+
+     // Figure out what kind of image format we're dealing with
+     if (stricmp(ext, ".CUE") == 0)
+     {
+       // It's a Single BIN/CUE
+       imgtype = IMG_BINCUE;
+       ret = LoadBinCue(iso, iso_file);
+     }
+     else if (stricmp(ext, ".MDS") == 0 && strncmp(header, "MEDIA ", sizeof(header)) == 0)
+     {
+       // It's a MDS
+       imgtype = IMG_MDS;
+       ret = LoadMDS(iso, iso_file);
+     }
+     else if (stricmp(ext, ".CCD") == 0)
+     {
+       // It's a CCD
+       imgtype = IMG_CCD;
+       ret = LoadCCD(iso, iso_file);
+     }
+     else if (stricmp(ext, ".CHD") == 0)
+     {
+       // It's a CCD
+       imgtype = IMG_CHD;
+       ret = LoadCHD(iso, iso_file);
+     }
+     else
+     {
+       // read header
+       if (checkCHD(iso) == 0) {
+         imgtype = IMG_CHD;
+         ret = LoadCHD(iso, iso_file);
+       }
+       else {
+         // Assume it's an ISO file
+         imgtype = IMG_ISO;
+         ret = LoadISO(iso_file);
+       }
+     }
    }
 
    if (ret != 0)
@@ -1697,6 +1738,18 @@ typedef struct ChdInfo_ {
 } ChdInfo;
 
 ChdInfo * pChdInfo = NULL;
+
+int checkCHD(const char *filename ) {
+
+  chd_file *chd;
+  chd_error error = chd_open(filename, CHD_OPEN_READ, NULL, &chd);
+  if (error != CHDERR_NONE) {
+    return -1;
+  }
+  chd_close(chd);
+  return 0;
+
+}
 
 static int LoadCHD(const char *chd_filename, FILE *iso_file)
 {
@@ -1917,7 +1970,7 @@ static int ISOCDReadSectorFADFromCHD(u32 FAD, void *buffer) {
   chdlba = loglba;
   for (i = 0; i < disc.session_num; i++)
   {
-    for (j = 0; j < disc.session[i].track_num; j++)
+    for (j = 0; j < disc.session[i].track_num-1; j++)
     {
       //if (j == 1) {
       //  int a = 0;
@@ -1958,8 +2011,17 @@ static int ISOCDReadSectorFADFromCHD(u32 FAD, void *buffer) {
     }
   }
   else {
-    memcpy(buffer, pChdInfo->hunk_buffer + hunk_offset, track->sector_size);
+    
+    if (track->sector_size == 2048)
+    {
+      memcpy(buffer, syncHdr, 12);
+      memcpy((char *)buffer + 0x10, pChdInfo->hunk_buffer + hunk_offset, track->sector_size);
+    }
+    else {
+      memcpy(buffer, pChdInfo->hunk_buffer + hunk_offset, track->sector_size);
+    }
   }
 
   return 1;
 }
+

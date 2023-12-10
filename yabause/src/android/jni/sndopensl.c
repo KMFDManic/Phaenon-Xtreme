@@ -312,6 +312,10 @@ static void SNDOpenSLUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 
 
    copy1size = (num_samples * sizeof(s16) * 2);
    //printf("SNDOpenSLUpdateAudio %08X,%08X,%08X",currentpos,soundoffset[currentpos],copy1size);
+   if( soundoffset[currentpos]+copy1size > mbufferSizeInBytes  ){
+      yprintf("SNDOpenSLUpdateAudio Overflow cpos:%08X, max:%08X, offset:%08X, size:%08X",currentpos,mbufferSizeInBytes,soundoffset[currentpos],copy1size);
+      copy1size = mbufferSizeInBytes-soundoffset[currentpos];
+   }
 
    sdlConvert32uto16s((s32 *)leftchanbuffer, (s32 *)rightchanbuffer, (s16 *)(((u8 *)stereodata16[currentpos])+soundoffset[currentpos] ), copy1size / sizeof(s16) / 2);
 
@@ -365,7 +369,12 @@ static void SNDOpenSLUnMuteAudio(void)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
+#include <math.h>
 static void SNDOpenSLSetVolume(int volume)
 {
+    if(bqPlayerVolume){
+        float vol = (float)volume / 100.0f;
+        (*bqPlayerVolume)->SetVolumeLevel(bqPlayerVolume, (vol >= 1.0f) ? 0 : ((vol < 0.01f) ? -16000   
+                                                          : (SLmillibel)(8000.0f*log10f(vol))));
+    }
 }

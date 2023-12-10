@@ -21,11 +21,14 @@
 #include "YabauseGL.h"
 #include "QtYabause.h"
 #include "VolatileSettings.h"
+#include <QWindow>
 
 YabauseGL::YabauseGL( QWidget* p )
   : QGLWidget(p)
 {
 	setFocusPolicy( Qt::StrongFocus );
+
+  windowHandle()->setSurfaceType(QWindow::OpenGLSurface);
 
   QGLFormat fmt;
   fmt.setProfile(QGLFormat::CompatibilityProfile);
@@ -51,13 +54,15 @@ void YabauseGL::showEvent( QShowEvent* e )
 }
 
 void YabauseGL::resizeGL( int w, int h )
-{ updateView( QSize( w, h ) ); }
+{ 
+//	updateView( QSize( w, h ) ); 
+}
 
 void YabauseGL::updateView( const QSize& s )
 {
   VolatileSettings* vs = QtYabause::volatileSettings();
   VideoSetSetting(VDP_SETTING_ROTATE_SCREEN, vs->value("Video/RotateScreen", false).toBool());
-  int aspectRatio = QtYabause::volatileSettings()->value("Video/AspectRatio", 1).toInt();
+  int aspectRatio = QtYabause::volatileSettings()->value("Video/AspectRatio", 0).toInt();
 
   int full = 0;
   if (fullscreen) {

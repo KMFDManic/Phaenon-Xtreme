@@ -17,6 +17,25 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+This file is part of YabaSanshiro.
+
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
 
 #ifndef VIDSHARED_H
 #define VIDSHARED_H
@@ -24,6 +43,10 @@
 #include "core.h"
 #include "vdp2.h"
 #include "debug.h"
+
+#if defined (__cplusplus)
+extern "C" {
+#endif
 
 #define YGL_TESS_COUNT (8)
 #define YGL_MAX_NEED_BUFFER (12*YGL_TESS_COUNT*YGL_TESS_COUNT)
@@ -988,5 +1011,12 @@ static INLINE void Vdp1ProcessSpritePixel(int type, u16 *pixel, int *shadow, int
 #define VDP2_VRAM_B1 (3)
 
 int Vdp2GetBank(Vdp2* regs, u32 addr);
+int PixelIsSpecialPriority(int specialcode, int dot);
+
+void VDP2genVRamCyclePattern();
+
+#if defined (__cplusplus)
+}
+#endif
 
 #endif

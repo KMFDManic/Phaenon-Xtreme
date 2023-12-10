@@ -17,6 +17,26 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+This file is part of YabaSanshiro.
+
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
+
 #ifndef  _YGL_H_
 #define  _YGL_H_
 #ifdef __cplusplus
@@ -402,6 +422,7 @@ typedef struct  {
  float u_vheight;
  int u_color_ram_offset;
  float u_viewport_offset;
+ int u_sprite_window;
 } UniformFrameBuffer;
 
 /*
@@ -494,6 +515,13 @@ typedef enum
   RBG_RES_FIT_TO_EMULATION
 } RBG_RESOLUTION_MODE;
 
+typedef enum
+{
+  ORIGINAL = 0,
+  _4_3,
+  _16_9,
+  FULL,
+} ASPECT_RATE_MODE;
 
 typedef enum {
 	NBG0 = 0,
@@ -600,10 +628,6 @@ typedef struct {
    u32 targetfbo;
    int vpd1_running;
    int cpu_framebuffer_write[2];
-   int min_fb_x;
-   int max_fb_x;
-   int min_fb_y;
-   int max_fb_y;
 
    GLuint cram_tex;
    GLuint cram_tex_pbo;
@@ -620,8 +644,12 @@ typedef struct {
 
    int screen_width;
    int screen_height;
-   int keep_aspect;
    int isFullScreen;
+
+   ASPECT_RATE_MODE aspect_rate_mode;
+
+   int bWriteCpuFrameBuffer;
+   u32 * CpuWriteFrameBuffer;
 
 }  Ygl;
 
@@ -818,6 +846,9 @@ static INLINE u32 VDP1COLOR16TO24(u16 temp) {
 void Ygl_uniformVDP2DrawFrameBufferShadow(void * p);
 void Ygl_uniformVDP2DrawFramebuffer(void * p, float from, float to, float * offsetcol, int blend);
 int YglDrawBackScreen(float w, float h);
+
+u32 Vdp2ColorRamGetColor(u32 colorindex, int alpha);
+
 
 #endif // YGL_H
 

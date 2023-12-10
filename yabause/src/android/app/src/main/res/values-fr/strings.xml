@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources tools:ignore="MissingTranslation" xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">uoYabause</string>
     <string name="menu_exit">Quitter</string>
 	<string name="menu_reset">Redémarrer</string>
     <string name="menu_save_state">Sauvegarder un Etat</string>
@@ -127,16 +126,12 @@
     <string name="error_fragment_message">Une erreur s\'est produite</string>
     <string name="dismiss_error">Rejeter</string>
     <string name="oops">Oups</string>
-
-    <string name="title_activity_game_select" translatable="false">uoYabause</string>
 	<string name="polygon_generation_type">Type de Génération du Polygone</string>
     <string name="choose_polygon_generation_type">Choisir un Type de Génération de Polygone</string>
     <string name="sound_engine">Moteur Son</string>
     <string name="choose_sound_engine">Choisir un Moteur Son</string>
     <string name="invitation_title">Envoyer une Invitation pour l\'App uoYabause</string>
     <string name="invitation_message">Jouer aux jeux SEGA Saturn en utilisant cette application !</string>
-    <string name="invitation_deep_link"  translatable="false" >https://b472u.app.goo.gl/YJ5F</string>
-    <string name="invitation_custom_image"  translatable="false" >https://lh3.googleusercontent.com/orp-j3lNGj24xvfVBEQvwWyaVhOQ_aTGc0nwIInDXBlNGUnSOdB_hb8sPGSmgmd0Jvkx=h310-rw</string>
     <string name="invitation_cta">Installer !</string>
     <string name="invite">Présentation</string>
     <string name="invite_message">Aimeriez vous présenter cette app app ?</string>
@@ -174,5 +169,28 @@
     <string name="this_func_not_yet">Cette fonction n\a pas été encore implémentée.</string>
     <string name="memory_manager">Gestionnaire de Mémoire</string>
     <string name="str_rotate_screen">Rotation à 90 degrée</string>
+    <string name="already_have_been">Si vous avez déjà fait un don, veuillez contacter smiyaxdev@gmail.com</string>
+    <string name="close">Close</string>
+
+    <string name="welcome">
+        <![CDATA[
+        # Bienvenue! \n\n
+
+         Pour jouer aux jeux SEGA Saturn, suivez ces instructions. \n\n
+
+         1. Générez un fichier image à partir de votre CD-ROM de jeu en utilisant DiscImageChef ou quelque chose. Des outils utiles sont répertoriés [ici] (http://wiki.redump.org/index.php?title=Useful_Links).\n
+         2. Copiez les fichiers image dans le répertoire **\"%1$s\"** dans la mémoire interne du téléphone intelligent.\n
+         3. Affichez le menu du tiroir et appuyez sur \"Rafraîchir la Liste de Jeu\". La liste des jeux s\'affiche alors.\n
+         4. Appuyez sur le titre du jeu auquel vous souhaitez jouer. \n
+         5. Profitez-en! \n
+         \n
+         Pour plus de détails, consultez notre [site Web] (https://www.uoyabause.org/static_pages/guide).
+        ]]>
+    </string>
+
+    <string name="delete_confirm_title">SUPPRIMER CONFIRMER</string>
+    <string name="not_available">INDISPONIBLE!</string>
+    <string name="only_pro_version">Cette fonction n\'est disponible que pour la version pro</string>
+    <string name="got_it">Je l\'ai!</string>
 
 </resources>

@@ -1,5 +1,4 @@
 /*  Copyright 2013 Guillaume Duhamel
-    Copyright 2017 devMiyax(smiyaxdev@gmail.com)
 
     This file is part of Yabause.
 
@@ -17,12 +16,29 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
+/*  Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+    This file is part of YabaSanshiro.
+
+    YabaSanshiro is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    YabaSanshiro is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with YabaSanshiro; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
+
 
 package org.uoyabause.android;
 
-import android.support.v4.view.MotionEventCompat;
 import android.view.MotionEvent;
-import android.view.KeyEvent;
 import android.view.View.OnTouchListener;
 import android.view.View;
 import android.graphics.Bitmap;
@@ -30,20 +46,15 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.Rect;
 import android.graphics.RectF;
-import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.util.AttributeSet;
-import android.util.Log;
 
 import java.util.HashMap;
 
-import android.util.DisplayMetrics;
-
-import org.uoyabause.android.PadEvent;
+import org.uoyabause.uranus.R;
 
 class PadButton {
     protected RectF rect;
@@ -198,27 +209,35 @@ class AnalogPad extends PadButton {
     }
 }
 
-interface OnPadListener {
-    public abstract boolean onPad(PadEvent event);
-}
 
 public class YabausePad extends View implements OnTouchListener {
-    private PadButton buttons[];
+
+  interface OnPadListener {
+    boolean onPad(PadEvent event);
+  }
+
+  private PadButton buttons[];
     private OnPadListener listener = null;
     private HashMap<Integer, Integer> active;
    // private DisplayMetrics metrics = null;
-    
-    Bitmap bitmap_pad_left = null;
+
+  int width_;
+  int height_;
+
+  Bitmap bitmap_pad_left = null;
     Bitmap bitmap_pad_right = null;
+    Bitmap bitmap_pad_middle = null;
     
     private Paint mPaint = new Paint();
     private Matrix matrix_left = new Matrix();
-    private Matrix matrix_right = new Matrix();    
+    private Matrix matrix_right = new Matrix();
+    private Matrix matrix_center = new Matrix();
     private Paint paint = new Paint();
     private Paint apaint = new Paint();
     private Paint tpaint = new Paint();
     
-    private float base_scale = 1.0f; 
+    private float base_scale = 1.0f;
+    private float ypos = 0.0f;
     final float basewidth = 1920.0f;
     final float baseheight = 1080.0f;
     private float wscale; 
@@ -243,7 +262,9 @@ public class YabausePad extends View implements OnTouchListener {
         }else{
             bitmap_pad_left = BitmapFactory.decodeResource(getResources(), R.drawable.pad_l);
             bitmap_pad_right= BitmapFactory.decodeResource(getResources(), R.drawable.pad_r);
+            bitmap_pad_middle= BitmapFactory.decodeResource(getResources(), R.drawable.pad_m);
         }
+        invalidate();
     }
     
     public YabausePad(Context context) {
@@ -264,6 +285,12 @@ public class YabausePad extends View implements OnTouchListener {
     public void setScale( float scale ){
     	this.base_scale = scale;
     }
+
+    public void setYpos( float ypos ){
+        this.ypos = ypos;
+    }
+
+    public float getYpos() { return this.ypos; }
     
     public float getScale(){
     	return base_scale;
@@ -286,12 +313,23 @@ public class YabausePad extends View implements OnTouchListener {
     	return status;
     }
 
+    public void updateScale(){
+      SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getContext());
+      base_scale = sharedPref.getFloat("pref_pad_scale", 0.75f);
+      ypos = sharedPref.getFloat("pref_pad_pos", 0.1f);
+      _transparent = sharedPref.getFloat("pref_pad_trans",1.0f);
+      //setPadScale( width_, height_ );
+      this.requestLayout();
+      this.invalidate();
+    }
+
     private void init() {
 
         setOnTouchListener(this);
 
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getContext());
-        base_scale= sharedPref.getFloat("pref_pad_scale", 0.5f);
+        base_scale= sharedPref.getFloat("pref_pad_scale", 0.75f);
+        ypos = sharedPref.getFloat("pref_pad_pos", 0.1f);
         _transparent = sharedPref.getFloat("pref_pad_trans",1.0f);
 
         buttons = new PadButton[PadEvent.BUTTON_LAST];
@@ -316,14 +354,15 @@ public class YabausePad extends View implements OnTouchListener {
     }
 
     @Override protected void onAttachedToWindow (){
-        paint.setARGB(0, 0, 0, 0);
-        apaint.setARGB(0, 0, 0x00, 0x00);
+        paint.setARGB(0xFF, 0, 0, 0xFF);
+        apaint.setARGB(0xFF, 0xFF, 0x00, 0x00);
         tpaint.setARGB(0x80, 0xFF, 0xFF, 0xFF);
         //bitmap_pad_left = BitmapFactory.decodeResource(getResources(), R.drawable.pad_l);
         //bitmap_pad_right= BitmapFactory.decodeResource(getResources(), R.drawable.pad_r);
         mPaint.setAntiAlias(true);
         mPaint.setFilterBitmap(true);
         mPaint.setDither(true);
+        super.onAttachedToWindow();
     }
 
     @Override public void onDraw(Canvas canvas) {
@@ -336,28 +375,29 @@ public class YabausePad extends View implements OnTouchListener {
 
         canvas.drawBitmap(bitmap_pad_left, matrix_left, mPaint);
         canvas.drawBitmap(bitmap_pad_right, matrix_right, mPaint);
+        canvas.drawBitmap(bitmap_pad_middle, matrix_center, mPaint);
         
         canvas.setMatrix(null);
+/*
+        canvas.save();
+    	canvas.concat(matrix_left);
+        buttons[PadEvent.BUTTON_UP].draw(canvas, paint, apaint, tpaint);
+        buttons[PadEvent.BUTTON_DOWN].draw(canvas, paint, apaint, tpaint);
+        buttons[PadEvent.BUTTON_LEFT].draw(canvas, paint, apaint, tpaint);
+        buttons[PadEvent.BUTTON_RIGHT].draw(canvas, paint, apaint, tpaint);
+        buttons[PadEvent.BUTTON_START].draw(canvas, paint, apaint, tpaint);
+        buttons[PadEvent.BUTTON_LEFT_TRIGGER].draw(canvas, paint, apaint, tpaint);
         
-         //canvas.save();
-    	//canvas.concat(matrix_left);
-        //buttons[PadEvent.BUTTON_UP].draw(canvas, paint, apaint, tpaint);
-        //buttons[PadEvent.BUTTON_DOWN].draw(canvas, paint, apaint, tpaint);
-        //buttons[PadEvent.BUTTON_LEFT].draw(canvas, paint, apaint, tpaint);
-        //buttons[PadEvent.BUTTON_RIGHT].draw(canvas, paint, apaint, tpaint);
-        //buttons[PadEvent.BUTTON_START].draw(canvas, paint, apaint, tpaint);
-        //buttons[PadEvent.BUTTON_LEFT_TRIGGER].draw(canvas, paint, apaint, tpaint);
-        
-        //canvas.restore();
-        //canvas.concat(matrix_right);
-        //buttons[PadEvent.BUTTON_A].draw(canvas, paint, apaint, tpaint);
-        //buttons[PadEvent.BUTTON_B].draw(canvas, paint, apaint, tpaint);
-        //buttons[PadEvent.BUTTON_C].draw(canvas, paint, apaint, tpaint);
-        //buttons[PadEvent.BUTTON_X].draw(canvas, paint, apaint, tpaint);
-        //buttons[PadEvent.BUTTON_Y].draw(canvas, paint, apaint, tpaint);
-        //buttons[PadEvent.BUTTON_Z].draw(canvas, paint, apaint, tpaint);
-        //buttons[PadEvent.BUTTON_RIGHT_TRIGGER].draw(canvas, paint, apaint, tpaint);
-
+        canvas.restore();
+        canvas.concat(matrix_right);
+        buttons[PadEvent.BUTTON_A].draw(canvas, paint, apaint, tpaint);
+        buttons[PadEvent.BUTTON_B].draw(canvas, paint, apaint, tpaint);
+        buttons[PadEvent.BUTTON_C].draw(canvas, paint, apaint, tpaint);
+        buttons[PadEvent.BUTTON_X].draw(canvas, paint, apaint, tpaint);
+        buttons[PadEvent.BUTTON_Y].draw(canvas, paint, apaint, tpaint);
+        buttons[PadEvent.BUTTON_Z].draw(canvas, paint, apaint, tpaint);
+        buttons[PadEvent.BUTTON_RIGHT_TRIGGER].draw(canvas, paint, apaint, tpaint);
+*/
         if(_pad_mode==1) {
             _analog_pad.draw(canvas, _axi_x, _axi_y, paint, apaint, tpaint);
         }
@@ -378,9 +418,14 @@ public class YabausePad extends View implements OnTouchListener {
                 YabauseRunnable.axis(PadEvent.PERANALOG_AXIS_Y, 0, _axi_y);
             }
         } else if (_analog_pad.isOn(pointerId)) {
-            _analog_pad.Off();
-            _axi_x = 128;
-            _axi_y = 128;
+
+            _axi_x = _analog_pad.getXvalue(posx);
+            _axi_y = _analog_pad.getYvalue(posy);
+
+            //_analog_pad.Off();
+            //_axi_x = 128;
+            //_axi_y = 128;
+
             invalidate();
             if (!testmode) {
                 YabauseRunnable.axis(PadEvent.PERANALOG_AXIS_X, 0, _axi_x);
@@ -388,6 +433,9 @@ public class YabausePad extends View implements OnTouchListener {
             }
         }
     }
+
+
+
     private void releasePad(int pointerId) {
         if (_analog_pad.isOn(pointerId)) {
             _analog_pad.Off();
@@ -400,6 +448,8 @@ public class YabausePad extends View implements OnTouchListener {
             invalidate();
         }
     }
+
+
 
     public boolean onTouch(View v, MotionEvent event) {
 
@@ -443,7 +493,7 @@ public class YabausePad extends View implements OnTouchListener {
 
             case MotionEvent.ACTION_POINTER_UP:
                 for (int btnindex = 0; btnindex < PadEvent.BUTTON_LAST; btnindex++) {
-                    if( buttons[btnindex].intersects(hittest) ) {
+                    if ( buttons[btnindex].isOn() && buttons[btnindex].getPointId() == pointerId)  {
                         buttons[btnindex].Off();
                     }
                 }
@@ -457,11 +507,10 @@ public class YabausePad extends View implements OnTouchListener {
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP:
                 for (int btnindex = 0; btnindex < PadEvent.BUTTON_LAST; btnindex++) {
-                    if( buttons[btnindex].intersects(hittest) ) {
+                    if ( buttons[btnindex].isOn() && buttons[btnindex].getPointId() == pointerId)  {
                         buttons[btnindex].Off();
                     }
                 }
-
                 if (_pad_mode == 1) {
                     releasePad(pointerId);
                 }
@@ -478,7 +527,63 @@ public class YabausePad extends View implements OnTouchListener {
 
                     RectF hittest2 = new RectF((int) (x2 - hitsize), (int) (y2 - hitsize), (int) (x2 + hitsize), (int) (y2 + hitsize));
 
-                    for (int btnindex = 0; btnindex < PadEvent.BUTTON_LAST; btnindex++) {
+                    if( buttons[PadEvent.BUTTON_DOWN].isOn() && eventID2 ==  buttons[PadEvent.BUTTON_DOWN].getPointId() ){
+                        int val  = _analog_pad.getYvalue((int)y2);
+                        if( val < (128+10) ){
+                            buttons[PadEvent.BUTTON_DOWN].Off();
+                        }
+                    }
+
+                    if( buttons[PadEvent.BUTTON_UP].isOn() && eventID2 ==  buttons[PadEvent.BUTTON_UP].getPointId() ){
+                        int val  = _analog_pad.getYvalue((int)y2);
+                        if( val > (128-10) ){
+                            buttons[PadEvent.BUTTON_UP].Off();
+                        }
+                    }
+
+                    if( buttons[PadEvent.BUTTON_RIGHT].isOn() && eventID2 ==  buttons[PadEvent.BUTTON_RIGHT].getPointId() ){
+                        int val  = _analog_pad.getXvalue((int)x2);
+                        if( val < (128+10) ){
+                            buttons[PadEvent.BUTTON_RIGHT].Off();
+                        }
+                    }
+
+                    if( buttons[PadEvent.BUTTON_LEFT].isOn() && eventID2 ==  buttons[PadEvent.BUTTON_LEFT].getPointId() ){
+                        int val  = _analog_pad.getXvalue((int)x2);
+                        if( val > (128-10) ){
+                            buttons[PadEvent.BUTTON_LEFT].Off();
+                        }
+                    }
+
+                    if( buttons[PadEvent.BUTTON_UP].intersects(hittest2) ){
+//                        if( buttons[PadEvent.BUTTON_DOWN].isOn() ){
+//                            buttons[PadEvent.BUTTON_DOWN].Off();
+//                        }
+                        buttons[PadEvent.BUTTON_UP].On(eventID2);
+                    }
+
+                    if( buttons[PadEvent.BUTTON_DOWN].intersects(hittest2) ){
+//                        if( buttons[PadEvent.BUTTON_UP].isOn() ){
+//                            buttons[PadEvent.BUTTON_UP].Off();
+//                        }
+                        buttons[PadEvent.BUTTON_DOWN].On(eventID2);
+                    }
+
+                    if( buttons[PadEvent.BUTTON_LEFT].intersects(hittest2) ){
+//                        if( buttons[PadEvent.BUTTON_RIGHT].isOn() ){
+//                            buttons[PadEvent.BUTTON_RIGHT].Off();
+//                        }
+                        buttons[PadEvent.BUTTON_LEFT].On(eventID2);
+                    }
+
+                    if( buttons[PadEvent.BUTTON_RIGHT].intersects(hittest2) ){
+//                        if( buttons[PadEvent.BUTTON_LEFT].isOn() ){
+//                            buttons[PadEvent.BUTTON_LEFT].Off();
+//                        }
+                        buttons[PadEvent.BUTTON_RIGHT].On(eventID2);
+                    }
+
+                    for (int btnindex = PadEvent.BUTTON_RIGHT_TRIGGER; btnindex < PadEvent.BUTTON_LAST; btnindex++) {
                         if( eventID2 ==  buttons[btnindex].getPointId() ){
                             if(  buttons[btnindex].intersects(hittest2) == false ){
                                 buttons[btnindex].Off();
@@ -565,37 +670,52 @@ public class YabausePad extends View implements OnTouchListener {
 
     @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
 
-        if( bitmap_pad_left == null || bitmap_pad_right == null ){
-            super.onMeasure(widthMeasureSpec,heightMeasureSpec);
-            return;
-        }
+      if (bitmap_pad_left == null || bitmap_pad_right == null) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        return;
+      }
 
-        int width = MeasureSpec.getSize(widthMeasureSpec);
-        int height = MeasureSpec.getSize(heightMeasureSpec);
-        
+      width_ = MeasureSpec.getSize(widthMeasureSpec);
+      height_ = MeasureSpec.getSize(heightMeasureSpec);
+      setPadScale( width_, height_);
+    }
+
+    void setPadScale( int width, int height ){
+
         float dens = getResources().getDisplayMetrics().density;
         dens /= 2.0;
 
+        float pos = 0.0f;
+        int bitmap_height = bitmap_pad_right.getHeight();
 
         if (width > height) {
             wscale = (float) width / basewidth;
-            hscale = (float) height / baseheight;
+            hscale = wscale; //(float) height / baseheight;
         }else{
             wscale = (float) width / baseheight;
-            hscale = (float) height / basewidth;
+            hscale = wscale; //(float) height / basewidth;
         }
 
-        int bitmap_height = bitmap_pad_right.getHeight();
-    	
+        float maxpos = height - (bitmap_height * base_scale * hscale);
+        if (maxpos < 0.0f){
+            maxpos = 0.0f;
+        }
+        pos = this.ypos * maxpos;
+
         matrix_right.reset();
-        matrix_right.postTranslate(-780, -baseheight);
+        matrix_right.postTranslate(-780,-baseheight);
         matrix_right.postScale(base_scale*wscale, base_scale*hscale);
-        matrix_right.postTranslate(width, height);
+        matrix_right.postTranslate(width, height- pos);
         
         matrix_left.reset();
         matrix_left.postTranslate(0, -baseheight);
         matrix_left.postScale(base_scale*wscale, base_scale*hscale);
-        matrix_left.postTranslate(0, height);
+        matrix_left.postTranslate(0, height- pos);
+
+        matrix_center.reset();
+        matrix_center.postTranslate(-bitmap_pad_middle.getWidth(), -bitmap_pad_middle.getHeight());
+        matrix_center.postScale(base_scale*wscale, base_scale*hscale);
+        matrix_center.postTranslate(width/2, height- pos);
 
         // Left Part
         _analog_pad.updateRect(matrix_left, 130, 512, 420+144,533+378);
@@ -606,12 +726,14 @@ public class YabausePad extends View implements OnTouchListener {
         //buttons[PadEvent.BUTTON_DOWN].updateRect(matrix_left,303,752,303+89,752+180);
         buttons[PadEvent.BUTTON_DOWN].updateRect(matrix_left,130,784,130+429,784+151);        
         //buttons[PadEvent.BUTTON_RIGHT].updateRect(matrix_left,392,671,392+162,671+93);
-        buttons[PadEvent.BUTTON_RIGHT].updateRect(matrix_left,420,533,420+144,533+378);
+        buttons[PadEvent.BUTTON_RIGHT].updateRect(matrix_left,436,533,436+128,533+378);
         //buttons[PadEvent.BUTTON_LEFT].updateRect(matrix_left,141,671,141+162,671+93);
-        buttons[PadEvent.BUTTON_LEFT].updateRect(matrix_left,148,533,148+144,533+378);
+        buttons[PadEvent.BUTTON_LEFT].updateRect(matrix_left,148,533,148+128,533+378);
 
         buttons[PadEvent.BUTTON_LEFT_TRIGGER].updateRect(matrix_left,56,57,56+376,57+92);
-        buttons[PadEvent.BUTTON_START].updateRect(matrix_left,510,1013,510+182,1013+57);
+        //buttons[PadEvent.BUTTON_START].updateRect(matrix_left,510,1013,510+182,1013+57);
+
+        buttons[PadEvent.BUTTON_START].updateRect(matrix_center,0,57,bitmap_pad_middle.getWidth(),bitmap_pad_middle.getHeight());
 
         // Right Part
         buttons[PadEvent.BUTTON_A].updateRect(matrix_right,59,801,59+213,801+225);
@@ -629,16 +751,20 @@ public class YabausePad extends View implements OnTouchListener {
         buttons[PadEvent.BUTTON_RIGHT_TRIGGER].updateRect(matrix_right,350,59,350+379,59+91);
         
         matrix_right.reset();
-        matrix_right.postTranslate(- bitmap_pad_right.getWidth(), - bitmap_pad_right.getHeight());
+        matrix_right.postTranslate(- bitmap_pad_right.getWidth(), - bitmap_pad_right.getHeight() );
         matrix_right.postScale(base_scale*wscale/dens, base_scale*hscale/dens);
-        matrix_right.postTranslate(width, height);
+        matrix_right.postTranslate(width, height - pos);
         
         matrix_left.reset();
-        matrix_left.postTranslate(0, - bitmap_pad_right.getHeight());
+        matrix_left.postTranslate(0, - bitmap_pad_right.getHeight() );
         matrix_left.postScale(base_scale*wscale/dens, base_scale*hscale/dens);
-        matrix_left.postTranslate(0, height);
-        
-        setMeasuredDimension(width, height);
+        matrix_left.postTranslate(0, height - pos );
+
+        matrix_center.reset();
+        matrix_center.postTranslate(-bitmap_pad_middle.getWidth(), -bitmap_pad_middle.getHeight() );
+        matrix_center.postScale(base_scale*wscale/dens, base_scale*hscale/dens);
+        matrix_center.postTranslate(width/2, height - pos);
+      setMeasuredDimension(width, height);
     }
 }
 

@@ -1,18 +1,19 @@
-/*  Copyright 2018 devMiyax(smiyaxdev@gmail.com)
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
 
 This file is part of YabaSanshiro.
 
-Yabause is free software; you can redistribute it and/or modify
+        YabaSanshiro is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.
 
-Yabause is distributed in the hope that it will be useful,
+YabaSanshiro is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
+        You should have received a copy of the GNU General Public License
 along with YabaSanshiro; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
@@ -25,8 +26,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#if GCC_VERSION < 9
 #include <experimental/filesystem>
-namespace fs = std::experimental::filesystem ;
+namespace fs = std::experimental::filesystem;
+#else
+#include <filesystem>
+namespace fs = std::filesystem;
+#endif
 
 #include <sys/resource.h>
 #include <errno.h>
@@ -56,11 +62,12 @@ extern "C" {
 #include "sndsdl.h"
 #include "osdcore.h"
 #include "ygl.h"
-#include "libpng12/png.h"
+#include "libpng16/png.h"
 }
 
 #include "InputManager.h"
 #include "MenuScreen.h"
+#include "Preference.h"
 
 #define YUI_LOG printf
 
@@ -69,6 +76,8 @@ char s_savepath[256] ="\0";
 
 extern "C" {
 static char biospath[256] = "/home/pigaming/RetroPie/BIOS/saturn/bios.bin";
+static char strgsyslangeid[256] = "english";
+static int syslanguageid = 0;
 static char cdpath[256] = ""; ///home/pigaming/RetroPie/roms/saturn/nights.cue";
 //static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/gd.cue";
 //static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/Virtua Fighter Kids (1996)(Sega)(JP).ccd";
@@ -76,6 +85,11 @@ static char buppath[256] = "./back.bin";
 static char mpegpath[256] = "\0";
 static char cartpath[256] = "\0";
 static bool menu_show = false;
+
+char* toLower(char* s) {
+  for(char *p=s; *p; p++) *p=tolower(*p);
+  return s;
+}
 
 #define LOG printf
 
@@ -202,6 +216,8 @@ int yabauseinit()
   int res;
   yabauseinit_struct yinit = {};
 
+  Preference pre( cdpath );
+
   yinit.m68kcoretype = M68KCORE_MUSASHI;
   yinit.percoretype = PERCORE_DUMMY;
 #if defined(__PC__)
@@ -217,6 +233,7 @@ int yabauseinit()
   yinit.cdcoretype = CDCORE_ISO;
   yinit.carttype = CART_DRAM32MBIT;
   yinit.regionid = 0;
+  yinit.syslanguageid = syslanguageid;
   if( g_emulated_bios ){
     yinit.biospath = NULL;
   }else{
@@ -231,22 +248,27 @@ int yabauseinit()
   yinit.usethreads = 0;
   yinit.skip_load = 0;    
   yinit.video_filter_type = 0;
-  yinit.polygon_generation_mode = PERSPECTIVE_CORRECTION; /*GPU_TESSERATION;*/
+#if defined(__JETSON__)    
+  yinit.polygon_generation_mode = GPU_TESSERATION;
+#else
+  yinit.polygon_generation_mode = PERSPECTIVE_CORRECTION;
+#endif
   yinit.use_new_scsp = 1;
-  yinit.resolution_mode = g_resolution_mode;
-  yinit.rotate_screen = 0;
+  yinit.resolution_mode = pre.getInt( "Resolution" ,g_resolution_mode);
+  yinit.rotate_screen = pre.getBool( "Rotate screen" , false );
   yinit.scsp_sync_count_per_frame = g_scsp_sync;
   yinit.extend_backup = 1;
+#if defined(__JETSON__)  
+  yinit.scsp_main_mode = 0;
+#else
   yinit.scsp_main_mode = 1;
-  yinit.rbg_resolution_mode = 0;
-
-  //std::string::size_type pos = std::string((const char*)glGetString(GL_VERSION)).find( std::string("3.2"));
-  //if( pos != std::string::npos) {
-  //  yinit.rbg_use_compute_shader = 1;
-  //  printf("Compute shader is enabled!\n");
-  //}else{
-    yinit.rbg_use_compute_shader = 0;
-  //}
+#endif
+  yinit.rbg_resolution_mode = pre.getInt( "Rotate screen resolution" ,0);
+#if defined(__JETSON__)
+  yinit.rbg_use_compute_shader = pre.getBool( "Use compute shader" , true);
+#else
+  yinit.rbg_use_compute_shader = pre.getBool( "Use compute shader" , false);
+#endif
 
   res = YabauseInit(&yinit);
   if( res == -1) {
@@ -267,7 +289,7 @@ int main(int argc, char** argv)
 {
   inputmng = InputManager::getInstance();
   
-  printf("\033[2J");
+  //printf("\033[2J");
 
   // Inisialize home directory
   std::string home_dir = getenv("HOME");
@@ -288,6 +310,7 @@ int main(int argc, char** argv)
     if( all_args[0] == "-h" || all_args[0] == "--h" ){
       printf("Usage:\n");
       printf("  -b STRING  --bios STRING                 bios file\n");
+      printf("  -l STRING  --language STRING             english, deutsch, french, spanish,\n                                           italian, japanese\n");
       printf("  -i STRING  --iso STRING                  iso/cue file\n");
       printf("  -r NUMBER  --resolution_mode NUMBER      0 .. Native, 1 .. 4x, 2 .. 2x, 3 .. Original\n");
       printf("  -a         --keep_aspect_rate\n");
@@ -303,6 +326,15 @@ int main(int argc, char** argv)
 		if(( x == "-b" || x == "--bios") && (i+1<all_args.size() ) ) {
       g_emulated_bios = 0;
       strncpy(biospath, all_args[i+1].c_str(), 256);
+    }
+	  	else if(( x == "-l" || x == "--language") && (i+1<all_args.size() ) ) {
+      strncpy(strgsyslangeid, all_args[i+1].c_str(), 256);
+	  if (toLower(strgsyslangeid) == "english") { syslanguageid = 0; }
+	  if (toLower(strgsyslangeid) == "deutsch") { syslanguageid = 1; }
+	  if (toLower(strgsyslangeid) == "french") { syslanguageid = 2; }
+	  if (toLower(strgsyslangeid) == "spanish") { syslanguageid = 3; }
+	  if (toLower(strgsyslangeid) == "italian") { syslanguageid = 4; }
+	  if (toLower(strgsyslangeid) == "japanese") { syslanguageid = 5; }
     }
 		else if(( x == "-i" || x == "--iso") && (i+1<all_args.size() ) ) {
       strncpy(cdpath, all_args[i+1].c_str(), 256);
@@ -340,6 +372,10 @@ int main(int argc, char** argv)
   SDL_GL_SetSwapInterval(0);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+  SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+  SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
 
 #if defined(__PC__)
   int width = 1280;
@@ -372,16 +408,19 @@ int main(int argc, char** argv)
   printf("Extentions: %s\n",glGetString(GL_EXTENSIONS));
 
   inputmng->init(g_keymap_filename);
-  menu = new MenuScreen(wnd,width,height, g_keymap_filename);
+  menu = new MenuScreen(wnd,width,height, g_keymap_filename, cdpath);
   menu->setConfigFile(g_keymap_filename);  
+  menu->setCurrentGamePath(cdpath);
 
   if( yabauseinit() == -1 ) {
       printf("Fail to yabauseinit Bye! (%s)", SDL_GetError() );
       return -1;
   }
 
-  VIDCore->Resize(0,0,width,height,1,g_keep_aspect_rate);
-
+  Preference * p = new Preference(cdpath);
+  VIDCore->Resize(0,0,width,height,1,p->getInt("Aspect rate",0));
+  delete p;
+  
   SDL_GL_MakeCurrent(wnd,nullptr);
 #if defined(__RP64__) || defined(__N2__)
   YabThreadSetCurrentThreadAffinityMask(0x4);
@@ -446,6 +485,9 @@ int main(int argc, char** argv)
       }
       else if(e.type == evToggleMenu){
         if( menu_show ){
+            Preference * p = new Preference(cdpath);
+            VIDCore->Resize(0,0,width,height,1,p->getInt("Aspect rate",0));
+            delete p;
           hideMenuScreen();           
         }else{
           menu_show = true;
@@ -584,7 +626,7 @@ int main(int argc, char** argv)
         usleep( 16*1000 );
       }
     }else{
-      //printf("\033[%d;%dH Frmae = %d \n", 0, 0, frame_cont);
+      //printf("Frmae = %d \n", 0, 0, frame_cont);
       //frame_cont++;
       YabauseExec(); // exec one frame
     }
@@ -736,4 +778,45 @@ FINISH:
     if(bufRGB) free(bufRGB);
     if(row_pointers) free(row_pointers);
     return rtn;
+}
+
+extern "C" {
+
+  int YabauseThread_IsUseBios() {
+    //if( s_biospath == NULL){
+    //    return 1;
+    //}
+    return 0;
+
+  }
+
+  const char * YabauseThread_getBackupPath() {
+    //return s_buppath;
+    return NULL;
+  }
+
+  void YabauseThread_setUseBios(int use) {
+
+
+  }
+
+  char tmpbakcup[256];
+  void YabauseThread_setBackupPath( const char * buf) {
+      //strcpy(tmpbakcup,buf);
+      //s_buppath = tmpbakcup;
+  }
+
+  void YabauseThread_resetPlaymode() {
+      //if( s_playrecord_path != NULL ){
+      //    free(s_playrecord_path);
+      //    s_playrecord_path = NULL;
+      //}
+      //s_buppath = GetMemoryPath();
+  }
+
+  void YabauseThread_coldBoot() {
+    //YabauseDeInit();
+    //YabauseInit();
+    //YabauseReset();
+  }
 }

@@ -23,6 +23,10 @@
 
 #include "memory.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define REGION_AUTODETECT               0
 #define REGION_JAPAN                    1
 #define REGION_ASIANTSC                 2
@@ -59,6 +63,8 @@ typedef struct
 
 typedef struct {
    u8 dotsel; // 0 -> 320 | 1 -> 352
+   int syslanguageid;
+   int syslngid;
    u8 mshnmi;
    u8 sndres;
    u8 cdres;
@@ -81,7 +87,7 @@ typedef struct {
 
 extern SmpcInternal * SmpcInternalVars;
 
-int SmpcInit(u8 regionid, int clocksync, u32 basetime);
+int SmpcInit(u8 regionid, int syslanguageid, int clocksync, u32 basetime);
 void SmpcDeInit(void);
 void SmpcRecheckRegion(void);
 void SmpcReset(void);
@@ -100,4 +106,11 @@ void FASTCALL	SmpcWriteLong(u32, u32);
 
 int SmpcSaveState(FILE *fp);
 int SmpcLoadState(FILE *fp, int version, int size);
+
+int SmpcSetClockSync(int clocksync, u32 basetime);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

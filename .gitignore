@@ -10,3 +10,8 @@ build/
 *.so
 *.swp
 *.o
+yabause/*build*/*
+yabause/ax86_64/*
+yabause/src/qt/firebase_cpp_sdk/*
+yabause/src/android/.settings/*
+yabause/src/android/app/.settings/*

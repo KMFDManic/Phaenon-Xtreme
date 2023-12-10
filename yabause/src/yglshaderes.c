@@ -1,22 +1,21 @@
-/*  Copyright 2005-2006 Guillaume Duhamel
-    Copyright 2005-2006 Theo Berkau
-    Copyright 2011-2015 Shinya Miyamoto(devmiyax)
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
 
-    This file is part of Yabause.
+This file is part of YabaSanshiro.
 
-    Yabause is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-    Yabause is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with Yabause; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
    
  
@@ -556,7 +555,7 @@ const GLchar Yglprg_rgb_cram_line_f[] =
 "  if(txindex.a > 0.0) {\n"
 "    highp int highg = int(txindex.g*255.0);"
 "    vec4 txcol = texelFetch( s_color, ivec2( ((highg&0x7F)<<8) | int(txindex.r*255.0) , 0 ) , 0 );\n"
-"    txcol.a = txindex.a;\n"
+"    txcol.a = txindex.a; \n"
 "    if( (highg & 0x80)  != 0) {\n"
 "      int coef = int(txindex.b*255.0);\n"
 "      vec4 linecol;\n"
@@ -574,10 +573,9 @@ const GLchar Yglprg_rgb_cram_line_f[] =
 "        txcol = clamp(txcol+linecol,vec4(0.0),vec4(1.0)); txcol.a = txindex.a; \n"
 "      }\n"
 "    }\n"
-"    fragColor = txcol+u_color_offset;\n"
-"  }else{ \n"
+"    fragColor = clamp(txcol+u_color_offset,vec4(0.0),vec4(1.0));\n"
+"  }else \n"
 "    discard;\n"
-"  }\n"
 "}\n";
 
 const GLchar * pYglprg_rbg_cram_line_f[] = { Yglprg_rgb_cram_line_f, NULL };
@@ -747,6 +745,10 @@ int Ygl_uniformPerLineAlpha(void * p)
   prg->preblendmode = prg->blendmode;
   prg->blendmode = 0;
 
+#if !defined(_OGLES3_)
+  glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, strlen(__FUNCTION__), __FUNCTION__);
+#endif
+
   if (prg->prgid == PG_VDP2_PER_LINE_ALPHA_CRAM) {
     glEnableVertexAttribArray(prg->vertexp);
     glEnableVertexAttribArray(prg->texcoordp);
@@ -799,21 +801,40 @@ int Ygl_cleanupPerLineAlpha(void * p)
   }
 
   if ( (prg->blendmode & 0x03) == VDP2_CC_RATE ) {
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    if (((Vdp2Regs->CCCTL >> 9) & 0x01) == 0x01) {
+      glEnable(GL_BLEND);
+      glBlendFuncSeparate(GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA, GL_ONE, GL_ZERO);
+    }
+    else {
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
   }else if ((prg->blendmode&0x03) == VDP2_CC_ADD) {
     glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE);
+    glBlendFunc(GL_ONE, GL_SRC_ALPHA);
+  }
+  else {
+    glDisable(GL_BLEND);
+  }
+
+  if ((prg->bwin0 != 0 || prg->bwin1 != 0) /*|| (prg->blendmode != VDP2_CC_NONE && ccwindow)*/ ) {
+    YglSetupWindow(prg);
   }
 
   // call blit method
   YglBlitPerLineAlpha(_Ygl->tmpfbotex, _Ygl->targetfbo, _Ygl->rwidth, _Ygl->rheight, prg->matrix, prg->lineTexture, prg->specialcolormode);
+
+  if ((prg->bwin0 != 0 || prg->bwin1 != 0) /*|| (prg->blendmode != VDP2_CC_NONE && ccwindow)*/) {
+    YglCleanUpWindow(prg);
+  }
 
   glBindTexture(GL_TEXTURE_2D, YglTM->textureID_in[YglTM->current]);
   glActiveTexture(GL_TEXTURE0);
   if (prg->interuput_texture != 0) {
     glBindTexture(GL_TEXTURE_2D, YglTM->textureID_in[YglTM->current]);
   }
+
+ 
   return 0;
 }
 
@@ -825,6 +846,10 @@ int Ygl_uniformNormal_blur(void * p)
 {
   YglProgram * prg;
   prg = p;
+#if !defined(_OGLES3_)
+  glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, strlen(__FUNCTION__), __FUNCTION__);
+#endif
+
 
   Ygl_useTmpBuffer();
   glViewport(0, 0, _Ygl->rwidth, _Ygl->rheight);
@@ -965,6 +990,9 @@ int Ygl_uniformWindow(void * p )
 {
    YglProgram * prg;
    prg = p;
+#if !defined(_OGLES3_)
+   glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, strlen(__FUNCTION__), __FUNCTION__);
+#endif
    glUseProgram(prg->prgid );
    glEnableVertexAttribArray(0);
    glDisableVertexAttribArray(1);
@@ -1029,6 +1057,9 @@ int Ygl_uniformVdp1Normal(void * p )
 {
    YglProgram * prg;
    prg = p;
+#if !defined(_OGLES3_)
+   glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, strlen(__FUNCTION__), __FUNCTION__);
+#endif
    glEnableVertexAttribArray(prg->vertexp);
    glEnableVertexAttribArray(prg->texcoordp);
    glDisableVertexAttribArray(2);
@@ -1572,13 +1603,13 @@ const GLchar Yglprg_vdp1_shadow_f[] =
 "  addr.s = addr.s / (v_texcoord.q);\n"
 "  addr.t = addr.t / (v_texcoord.q);\n"
 "  vec4 spriteColor = texture(u_sprite,addr);\n"
-"  if( spriteColor.a == 0.0 ) discard;\n"
+"  if( spriteColor.a == 0.0 ){ discard; }\n"
 "  vec4 fboColor = texture(u_fbo,faddr);\n"
 "  int additional = int(fboColor.a * 255.0);\n"
 "  if( ((additional & 0xC0)==0x80) ) { \n"
 "    fragColor = vec4(fboColor.r*0.5,fboColor.g*0.5,fboColor.b*0.5,fboColor.a);\n"
 "  }else{\n"
-"    discard;"
+"    discard;\n"
 "  }\n"
 "}\n";
 const GLchar * pYglprg_vdp1_shadow_f[] = { Yglprg_vdp1_shadow_f, NULL };
@@ -1594,6 +1625,9 @@ int Ygl_uniformStartUserClip(void * p )
 {
    YglProgram * prg;
    prg = p;
+#if !defined(_OGLES3_)
+   glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, strlen(__FUNCTION__), __FUNCTION__);
+#endif
 
   glEnableVertexAttribArray(0);
   glDisableVertexAttribArray(1);
@@ -1771,6 +1805,7 @@ const GLchar Yglprg_vdp2_drawfb_cram_f[] =
 " float u_vheight; \n"
 " int u_color_ram_offset; \n"
 " float u_viewport_offset; \n"
+" int u_sprite_window; \n"
 "}; \n"
 "uniform highp sampler2D s_vdp1FrameBuffer;\n"
 "uniform sampler2D s_color; \n"
@@ -1792,12 +1827,16 @@ const GLchar Yglprg_vdp2_drawfb_cram_f[] =
 "  if( (additional & 0x40) != 0 ){  // index color? \n"
 "    if( fbColor.b != 0.0 ) {discard;} // draw shadow last path \n"
 "    int colindex = ( int(fbColor.g*65280.0) | int(fbColor.r*255.0)); \n"
-"    if( colindex == 0 && prinumber == 0) { discard;} // hard/vdp1/hon/p02_11.htm 0 data is ignoerd \n"
+"    if( colindex == 0 ){ if( u_sprite_window != 0 || prinumber == 0) { discard;} } // hard/vdp1/hon/p02_11.htm 0 data is ignoerd \n"
 "    colindex = colindex + u_color_ram_offset; \n"
 "    txcol = texelFetch( s_color,  ivec2( colindex ,0 )  , 0 );\n"
 "    fragColor = txcol;\n"
 "  }else{ // direct color \n"
-"    fragColor = fbColor;\n"
+"    if(u_sprite_window == 0 ){ \n"
+"       fragColor = fbColor;\n"
+"    }else{\n"
+"       if( fbColor.r == 0.0 && fbColor.g == 0.0 && fbColor.b == 0.0 ){ discard; }else{ fragColor = fbColor; }  \n"
+"    }"
 "  } \n"
 "  fragColor += u_coloroffset;  \n";
 
@@ -1888,6 +1927,7 @@ const GLchar Yglprg_vdp2_drawfb_hblank_f[] =
 " float u_vheight; \n"
 " int u_color_ram_offset; \n"
 " float u_viewport_offset; \n"
+" int u_sprite_window; \n"
 "}; \n"
 "uniform highp sampler2D s_vdp1FrameBuffer;\n"
 "uniform sampler2D s_color; \n"
@@ -1914,12 +1954,16 @@ const GLchar Yglprg_vdp2_drawfb_hblank_f[] =
 "  if( (additional & 0x40) != 0 ){  // index color? \n"
 "    if( fbColor.b != 0.0 ) {discard;} // draw shadow last path \n"
 "    int colindex = ( int(fbColor.g*65280.0) | int(fbColor.r*255.0)); \n"
-"    if( colindex == 0 && (additional&0x07) == 0 ) { discard;} // hard/vdp1/hon/p02_11.htm 0 data is ignoerd \n"
+"    if( colindex == 0 ){ if( u_sprite_window != 0 || (additional&0x07) == 0 ) { discard;} } // hard/vdp1/hon/p02_11.htm 0 data is ignoerd \n"
 "    colindex = colindex + u_color_ram_offset; \n"
 "    txcol = texelFetch( s_color,  ivec2( colindex ,0 )  , 0 );\n"
 "    fragColor = txcol;\n"
 "  }else{ // direct color \n"
-"    fragColor = fbColor;\n"
+"    if(u_sprite_window == 0 ){ \n"
+"       fragColor = fbColor;\n"
+"    }else{\n"
+"       if( fbColor.r == 0.0 && fbColor.g == 0.0 && fbColor.b == 0.0 ){ discard; }else{ fragColor = fbColor; }  \n"
+"    }"
 "  } \n"
 "  fragColor.r += (linetex.r-0.5)*2.0;      \n"
 "  fragColor.g += (linetex.g-0.5)*2.0;      \n"
@@ -2019,6 +2063,7 @@ const GLchar Yglprg_vdp2_drawfb_shadow_f[] =
 " float u_emu_height; \n"
 " float u_vheight; \n"
 " float u_viewport_offset; \n"
+" int u_sprite_window; \n"
 "}; \n"
 "uniform highp sampler2D s_vdp1FrameBuffer;\n"
 "in vec2 v_texcoord;\n"
@@ -2033,7 +2078,7 @@ const GLchar Yglprg_vdp2_drawfb_shadow_f[] =
 "  if( (additional & 0x40) != 0 && fbColor.b != 0.0 ){  // index color and shadow? \n"
 "    fragColor = vec4(0.0,0.0,0.0,0.5);\n"
 "  }else{ // direct color \n"
-"    discard;;\n"
+"    discard;\n"
 "  } \n"
 "  gl_FragDepth = (depth+1.0)*0.5;\n"
 "}\n";
@@ -2922,7 +2967,7 @@ int YglProgramInit()
    shadow.fbo = glGetUniformLocation(_prgid[PG_VFP1_SHADOW], (const GLchar *)"u_fbo");
    shadow.fbowidth = glGetUniformLocation(_prgid[PG_VFP1_SHADOW], (const GLchar *)"u_fbowidth");
    shadow.fboheight = glGetUniformLocation(_prgid[PG_VFP1_SHADOW], (const GLchar *)"u_fbohegiht");
-
+   shadow.texsize = glGetUniformLocation(_prgid[PG_VFP1_SHADOW], (const GLchar *)"u_texsize");
 
    //-----------------------------------------------------------------------------------------------------------
    YGLLOG("PG_VFP1_GOURAUDSAHDING_HALFTRANS\n");
@@ -3021,16 +3066,27 @@ int YglProgramInit()
 
 int YglTesserationProgramInit()
 {
+  if (_prgid[PG_VFP1_GOURAUDSAHDING_TESS] != 0 &&
+    _prgid[PG_VFP1_GOURAUDSAHDING_SPD_TESS] != 0 &&
+    _prgid[PG_VFP1_MESH_TESS] != 0 &&
+    _prgid[PG_VFP1_GOURAUDSAHDING_HALFTRANS_TESS] != 0 &&
+    _prgid[PG_VFP1_SHADOW_TESS] != 0 &&
+    _prgid[PG_VFP1_HALFTRANS_TESS] != 0) {
+    return 0;
+  }
+    
+
   //-----------------------------------------------------------------------------------------------------------
     YGLLOG("PG_VFP1_GOURAUDSAHDING_TESS");
     if (YglInitShader(PG_VFP1_GOURAUDSAHDING_TESS,
-      pYglprg_vdp1_gouraudshading_tess_v,
-      pYglprg_vdp1_gouraudshading_f,
-      1,
-      pYglprg_vdp1_gouraudshading_tess_c,
-      pYglprg_vdp1_gouraudshading_tess_e,
-      pYglprg_vdp1_gouraudshading_tess_g) != 0)
-      return -1;
+        pYglprg_vdp1_gouraudshading_tess_v,
+        pYglprg_vdp1_gouraudshading_f,
+        1,
+        pYglprg_vdp1_gouraudshading_tess_c,
+        pYglprg_vdp1_gouraudshading_tess_e,
+        pYglprg_vdp1_gouraudshading_tess_g) != 0)
+        return -1;
+    
 
     Ygl_Vdp1CommonGetUniformId(_prgid[PG_VFP1_GOURAUDSAHDING_TESS], &grow_tess);
 
@@ -3090,6 +3146,7 @@ int YglTesserationProgramInit()
     shadow_tess.fbo = glGetUniformLocation(_prgid[PG_VFP1_SHADOW_TESS], (const GLchar *)"u_fbo");
     shadow_tess.fbowidth = glGetUniformLocation(_prgid[PG_VFP1_SHADOW_TESS], (const GLchar *)"u_fbowidth");
     shadow_tess.fboheight = glGetUniformLocation(_prgid[PG_VFP1_SHADOW_TESS], (const GLchar *)"u_fbohegiht");
+    shadow_tess.texsize = glGetUniformLocation(_prgid[PG_VFP1_SHADOW_TESS], (const GLchar *)"u_texsize");
 
     //---------------------------------------------------------------------------------------------------------
     YGLLOG("PG_VFP1_HALFTRANS_TESS");
@@ -3241,6 +3298,7 @@ int YglProgramChange( YglLevel * level, int prgid )
      current->vertexp = 0;
      current->texcoordp = 1;
      current->mtxModelView = id_normal_cram_matrix;
+     current->color_offset = id_normal_cram_color_offset;
    }
    else if (prgid == PG_VDP2_BLUR_CRAM)
    {
@@ -3267,8 +3325,8 @@ int YglProgramChange( YglLevel * level, int prgid )
      current->cleanupUniform = Ygl_cleanupPerLineAlpha;
      current->vertexp = 0;
      current->texcoordp = 1;
-     current->color_offset = glGetUniformLocation(_prgid[PG_VDP2_PER_LINE_ALPHA], (const GLchar *)"u_color_offset");
-     current->mtxModelView = glGetUniformLocation(_prgid[PG_VDP2_PER_LINE_ALPHA], (const GLchar *)"u_mvpMatrix");
+     current->mtxModelView = id_normal_cram_matrix;
+     current->color_offset = id_normal_cram_color_offset;
 
    }else if( prgid == PG_VDP1_NORMAL )
    {
@@ -3692,10 +3750,11 @@ static const char fblit_img[] =
   "in highp vec2 vTexCoord;     \n"
   "uniform sampler2D u_Src;     \n"
   "out vec4 fragColor;            \n"
-  "void main()                                         \n"
-  "{                                                   \n"
-  "  fragColor = texture( u_Src, vTexCoord ) ; \n"
+  "void main()                               \n"
+  "{                                         \n"
+  " fragColor = texture( u_Src, vTexCoord ) ; "
   "} \n";
+
 
 int YglBlitFramebuffer(u32 srcTexture, u32 targetFbo, float w, float h) {
 
@@ -3823,6 +3882,27 @@ int YglBlitFramebuffer(u32 srcTexture, u32 targetFbo, float w, float h) {
   return 0;
 }
 
+static int blit_to_fb_prg = -1;
+
+static const char fblit_img_to_fb[] =
+#if defined (_OGLES3_)
+"#version 300 es \n"
+"precision highp float;       \n"
+#else
+"#version 330 \n"
+#endif
+"in highp vec2 vTexCoord;     \n"
+"uniform sampler2D u_Src;     \n"
+"out vec4 fragColor;            \n"
+"void main()                                         \n"
+"{                                                   \n"
+"  vec4 txcol = texture( u_Src, vTexCoord ) ; \n"
+"  if(txcol == vec4(1.0) )\n                                 "
+"     discard;\n                         "
+"  else \n                                            "
+"     fragColor = txcol;\n"
+"} \n";
+
 int YglWindowFramebuffer(u32 srcTexture, u32 targetFbo, float w, float h, float ww, float hh ) {
 
   float aspectRatio = 1.0;
@@ -3839,16 +3919,16 @@ int YglWindowFramebuffer(u32 srcTexture, u32 targetFbo, float w, float h, float 
   glBindFramebuffer(GL_FRAMEBUFFER, targetFbo);
 
 
-  if (blit_prg == -1) {
+  if (blit_to_fb_prg == -1) {
     GLuint vshader;
     GLuint fshader;
     GLint compiled, linked;
 
     const GLchar * vblit_img_v[] = { vblit_img, NULL };
-    const GLchar * fblit_img_v[] = { fblit_img, NULL };
+    const GLchar * fblit_img_v[] = { fblit_img_to_fb, NULL };
 
-    blit_prg = glCreateProgram();
-    if (blit_prg == 0) {
+    blit_to_fb_prg = glCreateProgram();
+    if (blit_to_fb_prg == 0) {
       return -1;
     }
 
@@ -3861,7 +3941,7 @@ int YglWindowFramebuffer(u32 srcTexture, u32 targetFbo, float w, float h, float 
     if (compiled == GL_FALSE) {
       YGLLOG("Compile error in vertex shader.\n");
       Ygl_printShaderError(vshader);
-      blit_prg = -1;
+      blit_to_fb_prg = -1;
       return -1;
     }
     glShaderSource(fshader, 1, fblit_img_v, NULL);
@@ -3870,26 +3950,25 @@ int YglWindowFramebuffer(u32 srcTexture, u32 targetFbo, float w, float h, float 
     if (compiled == GL_FALSE) {
       YGLLOG("Compile error in fragment shader.\n");
       Ygl_printShaderError(fshader);
-      blit_prg = -1;
+      blit_to_fb_prg = -1;
       return -1;
     }
 
-    glAttachShader(blit_prg, vshader);
-    glAttachShader(blit_prg, fshader);
-    glLinkProgram(blit_prg);
-    glGetProgramiv(blit_prg, GL_LINK_STATUS, &linked);
+    glAttachShader(blit_to_fb_prg, vshader);
+    glAttachShader(blit_to_fb_prg, fshader);
+    glLinkProgram(blit_to_fb_prg);
+    glGetProgramiv(blit_to_fb_prg, GL_LINK_STATUS, &linked);
     if (linked == GL_FALSE) {
       YGLLOG("Link error..\n");
-      Ygl_printShaderError(blit_prg);
-      blit_prg = -1;
+      Ygl_printShaderError(blit_to_fb_prg);
+      blit_to_fb_prg = -1;
       return -1;
     }
-
-    glUseProgram(blit_prg);
-    glUniform1i(glGetUniformLocation(blit_prg, "u_Src"), 0);
+    glUseProgram(blit_to_fb_prg);
+    glUniform1i(glGetUniformLocation(blit_to_fb_prg, "u_Src"), 0);
   }
   else {
-    glUseProgram(blit_prg);
+    glUseProgram(blit_to_fb_prg);
   }
 
 
@@ -4464,22 +4543,22 @@ const GLchar perlinealpha_blit_f[] =
 "  if(txcol.a > 0.0){\n                                 "
 "    addr.x = int(u_th * v_texcoord.y);\n"
 "    addr.y = 0; \n"
-"    if(u_specialColorFunc == 0 ) { "
-"        txcol.a = texelFetch( u_Line, addr,0 ).a;      \n"
+"    if(u_specialColorFunc == 0 ) { \n"
+"        txcol.a = texelFetch( u_Line, addr,0 ).a;\n"
 "    }else{ \n"
 "       if( txcol.a != 1.0 ) txcol.a = texelFetch( u_Line, addr,0 ).a; \n"
-"    }"
+"    }\n"
 "    txcol.r += (texelFetch( u_Line, addr,0 ).r-0.5)*2.0;\n"
 "    txcol.g += (texelFetch( u_Line, addr,0 ).g-0.5)*2.0;\n"
 "    txcol.b += (texelFetch( u_Line, addr,0 ).b-0.5)*2.0;\n"
 "    if( txcol.a > 0.0 ) \n"
-"       fragColor = txcol; \n                        "
+"       fragColor = txcol; \n"
 "    else \n"
-"       discard; \n                        "
+"       discard; \n"
 "  }else{ \n"
 "    discard; \n"
-"  }\n                                            "
-"}                                                   \n";
+"  }\n"
+"}\n";
 
 static int perlinealpha_prg = -1;
 static int u_perlinealpha_mtxModelView = -1;
@@ -4598,6 +4677,7 @@ int YglBlitPerLineAlpha(u32 srcTexture, u32 targetFbo, float w, float h, float *
   glBindTexture(GL_TEXTURE_2D, srcTexture);
   glActiveTexture(GL_TEXTURE1);
   glBindTexture(GL_TEXTURE_2D, lineTexture);
+
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
   // Clean up

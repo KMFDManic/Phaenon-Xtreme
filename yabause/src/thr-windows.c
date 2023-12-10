@@ -1,21 +1,21 @@
-/*  src/thr-windows.c: Windows thread functions
-    Copyright 2013 Theo Berkau. Based on code by Andrew Church and Lawrence Sebald.
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
 
-    This file is part of Yabause.
+This file is part of YabaSanshiro.
 
-    Yabause is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-    Yabause is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with Yabause; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
 /*! \file thr-windows.c
@@ -25,6 +25,7 @@
 #include <windows.h>
 #include "core.h"
 #include "threads.h"
+#include "debug.h"
 
 struct thd_s {
    int running;
@@ -56,7 +57,7 @@ static DWORD wrapper(void *hnd)
    return 0;
 }
 
-int YabThreadStart(unsigned int id, void (*func)(void *), void *arg) 
+int YabThreadStart(unsigned int id, void * (*func)(void *), void *arg) 
 { 
    if (!hnd_key_once)
    {
@@ -78,7 +79,7 @@ int YabThreadStart(unsigned int id, void (*func)(void *), void *arg)
    	  return -1;
    }
 
-   thread_handle[id].func = func;
+   thread_handle[id].func =func;
    thread_handle[id].arg = arg;
 
    if ((thread_handle[id].thd = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)wrapper, &thread_handle[id], 0, NULL)) == NULL)
@@ -308,6 +309,24 @@ void YabThreadSetCurrentThreadAffinityMask(int mask)
 
 int YabThreadGetCurrentThreadAffinityMask(){
 	return GetCurrentProcessorNumber();
+}
+
+
+
+int YabCopyFile( const char * src, const char * dst) {
+  BOOL rtn =  CopyFileA(src, dst, FALSE);
+  if (rtn == TRUE) {
+    return 0;
+  }
+  else {
+    DWORD errorMessageID = GetLastError();
+    LPSTR messageBuffer = NULL;
+    size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+      NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+    LOG(messageBuffer);
+    LocalFree(messageBuffer);
+    return -1;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////

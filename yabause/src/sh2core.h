@@ -17,6 +17,25 @@
     along with Yabause; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
+
+This file is part of YabaSanshiro.
+
+        YabaSanshiro is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+YabaSanshiro is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+along with YabaSanshiro; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
 
 #ifndef SH2CORE_H
 #define SH2CORE_H
@@ -289,6 +308,8 @@ typedef struct
    u16 RTCNT;  // 0xFFFFFFF4
    u16 RTCOR;  // 0xFFFFFFF8
    cache_enty cache;
+   u32 CHCR0M;
+   u32 WTCSRM;   // 0xFFFFFE80 mirror
 } Onchip_struct;
 
 typedef struct
@@ -354,6 +375,17 @@ typedef struct
    u64 count;
 } tilInfo_struct;
 
+typedef struct {
+  u32 * CHCR;
+  u32 * SAR;
+  u32 * DAR;
+  u32 * TCR;
+  u32 * CHCRM;
+  u32 * VCRDMA;
+  int copy_clock;
+} Dmac;
+
+
 typedef struct
 {
    sh2regs_struct regs;
@@ -413,6 +445,9 @@ typedef struct
    u32 pchistory_index;
 #endif
 
+   Dmac dma_ch0;
+   Dmac dma_ch1;
+   u32 pre_cycle;
    void * ext;  
 
 } SH2_struct;
@@ -540,6 +575,10 @@ extern SH2Interface_struct SH2Dynarec;
 
 extern SH2Interface_struct SH2Dyn;
 extern SH2Interface_struct SH2DynDebug;
+void FASTCALL SH2OnFrame(SH2_struct *context);
+
+void SH2RemoveInterrupt(SH2_struct *context, u8 vector, u8 level);
+
 
 void FASTCALL SH2OnFrame(SH2_struct *context);
 

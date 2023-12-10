@@ -1,18 +1,19 @@
-/*  Copyright 2018 devMiyax(smiyaxdev@gmail.com)
+/*
+        Copyright 2019 devMiyax(smiyaxdev@gmail.com)
 
 This file is part of YabaSanshiro.
 
-Yabause is free software; you can redistribute it and/or modify
+        YabaSanshiro is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.
 
-Yabause is distributed in the hope that it will be useful,
+YabaSanshiro is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
+        You should have received a copy of the GNU General Public License
 along with YabaSanshiro; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
@@ -111,6 +112,8 @@ void userAppExit()
 
 extern "C" {
 static char biospath[256] = "./yabasanshiro/bios.bin";
+static char strgsyslangeid[256] = "english";
+static int syslanguageid = 0;
 static char cdpath[256] = "./yabasanshiro/nights.cue";
 //static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/gd.cue";
 //static char cdpath[256] = "/home/pigaming/RetroPie/roms/saturn/Virtua Fighter Kids (1996)(Sega)(JP).ccd";
@@ -200,6 +203,11 @@ string g_keymap_filename;
 
 #include "nanovg.h"
 
+char* toLower(char* s) {
+  for(char *p=s; *p; p++) *p=tolower(*p);
+  return s;
+}
+	
 //----------------------------------------------------------------------------------------------
 NVGcontext * getGlobalNanoVGContext(){
   return NULL;
@@ -267,6 +275,7 @@ int yabauseinit()
   yinit.cdcoretype = CDCORE_ISO;
   yinit.carttype = CART_NONE;
   yinit.regionid = 0;
+  yinit.syslanguageid = syslanguageid;
   if( g_emulated_bios ){
     yinit.biospath = NULL;
   }else{
@@ -420,6 +429,7 @@ int main(int argc, char** argv)
     if( all_args[0] == "-h" || all_args[0] == "--h" ){
       printf("Usage:\n");
       printf("  -b STRING  --bios STRING                 bios file\n");
+      printf("  -l STRING  --language STRING             english, deutsch, french, spanish,\n                                           italian, japanese\n");
       printf("  -i STRING  --iso STRING                  iso/cue file\n");
       printf("  -r NUMBER  --resolution_mode NUMBER      0 .. Native, 1 .. 4x, 2 .. 2x, 3 .. Original\n");
       printf("  -a         --keep_aspect_rate\n");
@@ -435,6 +445,15 @@ int main(int argc, char** argv)
 		if(( x == "-b" || x == "--bios") && (i+1<all_args.size() ) ) {
       g_emulated_bios = 0;
       strncpy(biospath, all_args[i+1].c_str(), 256);
+    }
+	  	else if(( x == "-l" || x == "--language") && (i+1<all_args.size() ) ) {
+      strncpy(strgsyslangeid, all_args[i+1].c_str(), 256);
+	  if (toLower(strgsyslangeid) == "english") { yinit.syslanguageid = 0; }
+	  if (toLower(strgsyslangeid) == "deutsch") { yinit.syslanguageid = 1; }
+	  if (toLower(strgsyslangeid) == "french") { yinit.syslanguageid = 2; }
+	  if (toLower(strgsyslangeid) == "spanish") { yinit.syslanguageid = 3; }
+	  if (toLower(strgsyslangeid) == "italian") { yinit.syslanguageid = 4; }
+	  if (toLower(strgsyslangeid) == "japanese") { yinit.syslanguageid = 5; }
     }
 		else if(( x == "-i" || x == "--iso") && (i+1<all_args.size() ) ) {
       strncpy(cdpath, all_args[i+1].c_str(), 256);

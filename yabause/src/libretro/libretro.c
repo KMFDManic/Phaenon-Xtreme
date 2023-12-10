@@ -97,7 +97,7 @@ void retro_set_environment(retro_environment_t cb)
 {
    static const struct retro_variable vars[] = {
       { "yabasanshiro_force_hle_bios", "Force HLE BIOS (restart); disabled|enabled" },
-      { "yabasanshiro_frameskip", "Auto-frameskip; enabled|disabled" },
+      { "yabasanshiro_frameskip", "Xtreme TurboBoost; enabled|disabled" },
       { "yabasanshiro_addon_cart", "Addon Cartridge (restart); 4M_extended_ram|1M_extended_ram" },
       { "yabasanshiro_multitap_port1", "6Player Adaptor on Port 1; disabled|enabled" },
       { "yabasanshiro_multitap_port2", "6Player Adaptor on Port 2; disabled|enabled" },
@@ -352,7 +352,7 @@ static u32 soundbufsize;
 static s16 *sound_buf;
 
 static int SNDLIBRETROInit(void) {
-    int vertfreq = (yabsys.IsPal == 1 ? 50 : 60);
+    int vertfreq = (yabsys.IsPal == 1 ? 100 : 120);
     soundlen = (SAMPLERATE * 100 + (vertfreq >> 1)) / vertfreq;
     soundbufsize = (soundlen<<2 * sizeof(s16));
     if ((sound_buf = (s16 *)malloc(soundbufsize)) == NULL)
@@ -653,11 +653,11 @@ static struct retro_system_av_info g_av_info;
 void retro_get_system_info(struct retro_system_info *info)
 {
    memset(info, 0, sizeof(*info));
-   info->library_name     = "YabaSanshiro";
+   info->library_name     = "Phaenon Xtreme";
 #ifndef GIT_VERSION
 #define GIT_VERSION ""
 #endif
-   info->library_version  = "v" VERSION GIT_VERSION;
+   info->library_version  = "2K23";
    info->need_fullpath    = true;
    info->block_extract    = true;
    info->valid_extensions = "cue|iso|mds|ccd|chd";
@@ -814,7 +814,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 {
    memset(info, 0, sizeof(*info));
 
-   info->timing.fps            = (retro_get_region() == RETRO_REGION_NTSC) ? 60.0f : 50.0f;
+   info->timing.fps            = (retro_get_region() == RETRO_REGION_NTSC) ? 120.0f : 100.0f;
    info->timing.sample_rate    = SAMPLERATE;
    info->geometry.base_width   = game_width;
    info->geometry.base_height  = game_height;
@@ -995,8 +995,8 @@ bool retro_load_game(const struct retro_game_info *info)
    switch(resolution_mode)
    {
       case RES_ORIGINAL:
-         max_width = 704;
-         max_height = 512;
+         max_width = 512;
+         max_height = 256;
          break;
       case RES_4x:
          max_width = 704 * 4;
@@ -1346,7 +1346,6 @@ void reset_global_gl_state()
 void retro_run(void)
 {
    unsigned i;
-   bool fastforward = false;
    bool updated  = false;
    rendering_started = true;
    one_frame_rendered = false;
@@ -1361,11 +1360,7 @@ void retro_run(void)
       VIDCore->SetSettingValue(VDP_SETTING_RBG_USE_COMPUTESHADER, g_rbg_use_compute_shader);
       if(PERCore && (prev_multitap[0] != multitap[0] || prev_multitap[1] != multitap[1]))
          PERCore->Init();
-   }
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_FASTFORWARDING, &fastforward) && fastforward)
-   {
-      if (g_frame_skip == 1 && !fastforward)
+      if(g_frame_skip == 1)
          EnableAutoFrameSkip();
       else
          DisableAutoFrameSkip();

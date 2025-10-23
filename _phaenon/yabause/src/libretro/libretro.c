@@ -56,6 +56,8 @@ static bool renderer_running = false;
 static bool hle_bios_force = false;
 static bool one_frame_rendered = false;
 
+int selected_clock = CLKTYPE_28MHZ;
+
 static bool libretro_supports_bitmasks = false;
 static int16_t libretro_input_bitmask[12] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
  
@@ -96,8 +98,9 @@ extern struct retro_hw_render_callback hw_render;
 void retro_set_environment(retro_environment_t cb)
 {
    static const struct retro_variable vars[] = {
-      { "yabasanshiro_force_hle_bios", "Force HLE BIOS (restart, deprecated, debug only); disabled|enabled" },
-      { "yabasanshiro_frameskip", "Auto-frameskip (prevent fast-forwarding); enabled|disabled" },
+      { "yabasanshiro_force_hle_bios", "Force HLE BIOS (restart, deprecated, debug only); enabled|disabled" },
+      { "yabasanshiro_frameskip", "Auto-frameskip (Automatic); enabled|disabled" },
+      { "yabasanshiro_sh2_clock_speed", "SH2 Clock Speed (restart); 18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17" },
       { "yabasanshiro_addon_cart", "Addon Cartridge (restart); 4M_extended_ram|1M_extended_ram" },
       { "yabasanshiro_multitap_port1", "6Player Adaptor on Port 1; disabled|enabled" },
       { "yabasanshiro_multitap_port2", "6Player Adaptor on Port 2; disabled|enabled" },
@@ -583,7 +586,7 @@ static void context_reset(void)
    if (first_ctx_reset == 1)
    {
       first_ctx_reset = 0;
-      YabauseInit(&yinit);
+      YabauseInit(&yinit, selected_clock);
       renderer_running = true;
       retro_set_resolution();
       OSDChangeCore(OSDCORE_DUMMY);
@@ -657,7 +660,7 @@ void retro_get_system_info(struct retro_system_info *info)
 #ifndef GIT_VERSION
 #define GIT_VERSION ""
 #endif
-   info->library_version  = "2K23";
+   info->library_version  = "2K25";
    info->need_fullpath    = true;
    info->block_extract    = true;
    info->valid_extensions = "cue|iso|mds|ccd|chd";
@@ -687,30 +690,74 @@ void check_variables(void)
          g_frame_skip = 0;
    }
 
+   var.key = "yabasanshiro_sh2_clock_speed";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "1") == 0) selected_clock = CLKTYPE_1MHZ;
+      else if (strcmp(var.value, "2") == 0) selected_clock = CLKTYPE_2MHZ;
+      else if (strcmp(var.value, "3") == 0) selected_clock = CLKTYPE_3MHZ;
+      else if (strcmp(var.value, "4") == 0) selected_clock = CLKTYPE_4MHZ;
+      else if (strcmp(var.value, "5") == 0) selected_clock = CLKTYPE_5MHZ;
+      else if (strcmp(var.value, "6") == 0) selected_clock = CLKTYPE_6MHZ;
+      else if (strcmp(var.value, "7") == 0) selected_clock = CLKTYPE_7MHZ;
+      else if (strcmp(var.value, "8") == 0) selected_clock = CLKTYPE_8MHZ;
+      else if (strcmp(var.value, "9") == 0) selected_clock = CLKTYPE_9MHZ;
+      else if (strcmp(var.value, "10") == 0) selected_clock = CLKTYPE_10MHZ;
+      else if (strcmp(var.value, "11") == 0) selected_clock = CLKTYPE_11MHZ;
+      else if (strcmp(var.value, "12") == 0) selected_clock = CLKTYPE_12MHZ;
+      else if (strcmp(var.value, "13") == 0) selected_clock = CLKTYPE_13MHZ;
+      else if (strcmp(var.value, "14") == 0) selected_clock = CLKTYPE_14MHZ;
+      else if (strcmp(var.value, "15") == 0) selected_clock = CLKTYPE_15MHZ;
+      else if (strcmp(var.value, "16") == 0) selected_clock = CLKTYPE_16MHZ;
+      else if (strcmp(var.value, "17") == 0) selected_clock = CLKTYPE_17MHZ;
+      else if (strcmp(var.value, "18") == 0) selected_clock = CLKTYPE_18MHZ;
+      else if (strcmp(var.value, "19") == 0) selected_clock = CLKTYPE_19MHZ;
+      else if (strcmp(var.value, "20") == 0) selected_clock = CLKTYPE_20MHZ;
+      else if (strcmp(var.value, "21") == 0) selected_clock = CLKTYPE_21MHZ;
+      else if (strcmp(var.value, "22") == 0) selected_clock = CLKTYPE_22MHZ;
+      else if (strcmp(var.value, "23") == 0) selected_clock = CLKTYPE_23MHZ;
+      else if (strcmp(var.value, "24") == 0) selected_clock = CLKTYPE_24MHZ;
+      else if (strcmp(var.value, "25") == 0) selected_clock = CLKTYPE_25MHZ;
+      else if (strcmp(var.value, "26") == 0) selected_clock = CLKTYPE_26MHZ;
+      else if (strcmp(var.value, "27") == 0) selected_clock = CLKTYPE_27MHZ;
+      else if (strcmp(var.value, "28") == 0) selected_clock = CLKTYPE_28MHZ;
+      else if (strcmp(var.value, "29") == 0) selected_clock = CLKTYPE_29MHZ;
+      else if (strcmp(var.value, "30") == 0) selected_clock = CLKTYPE_30MHZ;
+      else if (strcmp(var.value, "31") == 0) selected_clock = CLKTYPE_31MHZ;
+      else if (strcmp(var.value, "32") == 0) selected_clock = CLKTYPE_32MHZ;
+      else if (strcmp(var.value, "33") == 0) selected_clock = CLKTYPE_33MHZ;
+      else if (strcmp(var.value, "34") == 0) selected_clock = CLKTYPE_34MHZ;
+      else if (strcmp(var.value, "35") == 0) selected_clock = CLKTYPE_35MHZ;
+      else if (strcmp(var.value, "36") == 0) selected_clock = CLKTYPE_36MHZ;
+      else if (strcmp(var.value, "37") == 0) selected_clock = CLKTYPE_37MHZ;
+      else if (strcmp(var.value, "38") == 0) selected_clock = CLKTYPE_38MHZ;
+      else if (strcmp(var.value, "39") == 0) selected_clock = CLKTYPE_39MHZ;
+      else if (strcmp(var.value, "40") == 0) selected_clock = CLKTYPE_40MHZ;
+      else if (strcmp(var.value, "41") == 0) selected_clock = CLKTYPE_41MHZ;
+      else if (strcmp(var.value, "42") == 0) selected_clock = CLKTYPE_42MHZ;
+      else if (strcmp(var.value, "43") == 0) selected_clock = CLKTYPE_43MHZ;
+      else if (strcmp(var.value, "44") == 0) selected_clock = CLKTYPE_44MHZ;
+      else if (strcmp(var.value, "45") == 0) selected_clock = CLKTYPE_45MHZ;
+      else if (strcmp(var.value, "46") == 0) selected_clock = CLKTYPE_46MHZ;
+      else if (strcmp(var.value, "47") == 0) selected_clock = CLKTYPE_47MHZ;
+      else if (strcmp(var.value, "48") == 0) selected_clock = CLKTYPE_48MHZ;
+   }
+
    var.key = "yabasanshiro_rbg_resolution_mode";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (strcmp(var.value, "original") == 0)
-      {
          g_rbg_resolution_mode = RBG_RES_ORIGINAL;
-      }
       else if (strcmp(var.value, "2x") == 0)
-      {
          g_rbg_resolution_mode = RBG_RES_2x;
-      }
       else if (strcmp(var.value, "720p") == 0)
-      {
          g_rbg_resolution_mode = RBG_RES_720P;
-      }
       else if (strcmp(var.value, "1080p") == 0)
-      {
          g_rbg_resolution_mode = RBG_RES_1080P;
-      }
       else if (strcmp(var.value, "Fit_to_emulation") == 0)
-      {
          g_rbg_resolution_mode = RBG_RES_FIT_TO_EMULATION;
-      }
    }
 
    var.key = "yabasanshiro_rbg_use_compute_shader";

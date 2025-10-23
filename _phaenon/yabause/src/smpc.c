@@ -36,6 +36,8 @@
 #include "yabause.h"
 #include "movie.h"
 
+extern uint32_t selected_clock;
+
 #ifdef _arch_dreamcast
 # include "dreamcast/localtime.h"
 #endif
@@ -166,8 +168,11 @@ void SmpcCKCHG352(void) {
 
    YabauseStopSlave();
 
-   // change clock
-   YabauseChangeTiming(CLKTYPE_28MHZ);
+// Instead of forcing a fixed value...
+// YabauseChangeTiming(CLKTYPE_28MHZ);
+
+// Just reapply the selected_clock
+YabauseChangeTiming(selected_clock);
 
    // Set DOTSEL
    SmpcInternalVars->dotsel = 1;
@@ -189,8 +194,11 @@ void SmpcCKCHG320(void) {
 
    YabauseStopSlave();
 
-   // change clock
-   YabauseChangeTiming(CLKTYPE_26MHZ);
+// Instead of forcing a fixed value...
+// YabauseChangeTiming(CLKTYPE_26MHZ);
+
+// Just reapply the selected_clock
+YabauseChangeTiming(selected_clock);
 
    // Set DOTSEL
    SmpcInternalVars->dotsel = 0;

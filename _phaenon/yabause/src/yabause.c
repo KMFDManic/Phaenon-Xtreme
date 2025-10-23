@@ -23,6 +23,19 @@
     \brief Yabause main emulation functions and interface for the ports
 */
 
+void setM68kCounter(int);
+void DoMovie(void);
+void SH2DynShowSttaics(void*, void*);
+void SH2HandleInterrupts(void*);
+
+#define SCSP_CYCLE_RATIO 768
+
+#include <stdint.h>
+#include "core.h"
+
+uint64_t g_scsp_sample_counter = 0;
+
+#define SAFE_SHIFT(x, s) ((s) >= 64 ? 0 : ((uint64_t)(x) << (s)))
 
 #include <sys/types.h>
 #ifdef WIN32
@@ -75,7 +88,6 @@
 #ifdef PSP
 #include "psp/common.h"
 #endif
-
 
 #ifdef SYS_PROFILE_H
  #include SYS_PROFILE_H
@@ -139,7 +151,67 @@ void YabauseChangeTiming(int freqtype) {
 
    const double freq_base = yabsys.IsPal ? 28437500.0
       : (39375000.0 / 11.0) * 8.0;  // i.e. 8 * 3.579545... = 28.636363... MHz
-   const double freq_mult = (freqtype == CLKTYPE_26MHZ) ? 15.0/16.0 : 1.0;
+
+double freq_mult = 1.0;
+
+switch (freqtype)
+{
+   case CLKTYPE_1MHZ:  freq_mult = 1.0  / 28.0; break;
+   case CLKTYPE_2MHZ:  freq_mult = 2.0  / 28.0; break;
+   case CLKTYPE_3MHZ:  freq_mult = 3.0  / 28.0; break;
+   case CLKTYPE_4MHZ:  freq_mult = 4.0  / 28.0; break;
+   case CLKTYPE_5MHZ:  freq_mult = 5.0  / 28.0; break;
+   case CLKTYPE_6MHZ:  freq_mult = 6.0  / 28.0; break;
+   case CLKTYPE_7MHZ:  freq_mult = 7.0  / 28.0; break;
+   case CLKTYPE_8MHZ:  freq_mult = 8.0  / 28.0; break;
+   case CLKTYPE_9MHZ:  freq_mult = 9.0  / 28.0; break;
+   case CLKTYPE_10MHZ: freq_mult = 10.0 / 28.0; break;
+   case CLKTYPE_11MHZ: freq_mult = 11.0 / 28.0; break;
+   case CLKTYPE_12MHZ: freq_mult = 12.0 / 28.0; break;
+   case CLKTYPE_13MHZ: freq_mult = 13.0 / 28.0; break;
+   case CLKTYPE_14MHZ: freq_mult = 14.0 / 28.0; break;
+   case CLKTYPE_15MHZ: freq_mult = 15.0 / 28.0; break;
+   case CLKTYPE_16MHZ: freq_mult = 16.0 / 28.0; break;
+   case CLKTYPE_17MHZ: freq_mult = 17.0 / 28.0; break;
+   case CLKTYPE_18MHZ: freq_mult = 18.0 / 28.0; break;
+   case CLKTYPE_19MHZ: freq_mult = 19.0 / 28.0; break;
+   case CLKTYPE_20MHZ: freq_mult = 20.0 / 28.0; break;
+   case CLKTYPE_21MHZ: freq_mult = 21.0 / 28.0; break;
+   case CLKTYPE_22MHZ: freq_mult = 22.0 / 28.0; break;
+   case CLKTYPE_23MHZ: freq_mult = 23.0 / 28.0; break;
+   case CLKTYPE_24MHZ: freq_mult = 24.0 / 28.0; break;
+   case CLKTYPE_25MHZ: freq_mult = 25.0 / 28.0; break;
+
+   // Keep legacy special case if still wanted:
+   case CLKTYPE_26MHZ: freq_mult = 15.0 / 16.0; break;
+
+   case CLKTYPE_27MHZ: freq_mult = 27.0 / 28.0; break;
+   case CLKTYPE_28MHZ: freq_mult = 28.0 / 28.0; break; // equals 1.0
+   case CLKTYPE_29MHZ: freq_mult = 29.0 / 28.0; break;
+   case CLKTYPE_30MHZ: freq_mult = 30.0 / 28.0; break;
+   case CLKTYPE_31MHZ: freq_mult = 31.0 / 28.0; break;
+   case CLKTYPE_32MHZ: freq_mult = 32.0 / 28.0; break;
+   case CLKTYPE_33MHZ: freq_mult = 33.0 / 28.0; break;
+   case CLKTYPE_34MHZ: freq_mult = 34.0 / 28.0; break;
+   case CLKTYPE_35MHZ: freq_mult = 35.0 / 28.0; break;
+   case CLKTYPE_36MHZ: freq_mult = 36.0 / 28.0; break;
+   case CLKTYPE_37MHZ: freq_mult = 37.0 / 28.0; break;
+   case CLKTYPE_38MHZ: freq_mult = 38.0 / 28.0; break;
+   case CLKTYPE_39MHZ: freq_mult = 39.0 / 28.0; break;
+   case CLKTYPE_40MHZ: freq_mult = 40.0 / 28.0; break;
+   case CLKTYPE_41MHZ: freq_mult = 41.0 / 28.0; break;
+   case CLKTYPE_42MHZ: freq_mult = 42.0 / 28.0; break;
+   case CLKTYPE_43MHZ: freq_mult = 43.0 / 28.0; break;
+   case CLKTYPE_44MHZ: freq_mult = 44.0 / 28.0; break;
+   case CLKTYPE_45MHZ: freq_mult = 45.0 / 28.0; break;
+   case CLKTYPE_46MHZ: freq_mult = 46.0 / 28.0; break;
+   case CLKTYPE_47MHZ: freq_mult = 47.0 / 28.0; break;
+   case CLKTYPE_48MHZ: freq_mult = 48.0 / 28.0; break;
+   default:
+         freq_mult = 1.0;
+         break;
+   }
+
    const double freq_shifted = (freq_base * freq_mult) * (1 << YABSYS_TIMING_BITS);
    const double usec_shifted = 1.0e6 * (1 << YABSYS_TIMING_BITS);
    const double deciline_time = yabsys.IsPal ? 1.0 /  50        / 313 / 10
@@ -159,115 +231,121 @@ extern int tweak_backup_file_size;
 YabEventQueue * q_scsp_frame_start;
 YabEventQueue * q_scsp_finish;
 
+// Forward declaration of SyncCPUtoSCSP (if used)
+static void SyncCPUtoSCSP(void);
 
-int YabauseInit(yabauseinit_struct *init)
+int YabauseInit(yabauseinit_struct *init, int selected_clock)
 {
   q_scsp_frame_start = YabThreadCreateQueue(1);
   q_scsp_finish = YabThreadCreateQueue(1);
   setM68kCounter(0);
 
-   yabsys.sync_shift = init->sync_shift;
+  yabsys.sync_shift = init->sync_shift;
 
-   // Need to set this first, so init routines see it
-   yabsys.UseThreads = init->usethreads;
-   yabsys.NumThreads = init->numthreads;
+  // Need to set this first, so init routines see it
+  yabsys.UseThreads = init->usethreads;
+  yabsys.NumThreads = init->numthreads;
 
-   // Initialize both cpu's
-   if (SH2Init(init->sh2coretype) != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("SH2"));
+  // Initialize both CPUs
+  if (SH2Init(init->sh2coretype) != 0)
+  {
+    YabSetError(YAB_ERR_CANNOTINIT, _("SH2"));
+    return -1;
+  }
+
+  // For testing: force a specific clock multiplier, e.g. 1.2x speed
+//  double freq_mult = 1.2;
+
+//  SH2SetClockMultiplier(freq_mult);
+
+  // Initialize memory regions
+  if ((BiosRom = T2MemoryInit(0x80000)) == NULL)
+    return -1;
+
+  if ((HighWram = T2MemoryInit(0x100000)) == NULL)
+    return -1;
+
+  if ((LowWram = T2MemoryInit(0x100000)) == NULL)
+    return -1;
+
+  yabsys.extend_backup = init->extend_backup;
+  if (yabsys.extend_backup) {
+    FILE * pbackup;
+    bupfilename = init->buppath;
+    pbackup = fopen(bupfilename, "a+b");
+    if (pbackup == NULL) {
+      YabSetError(YAB_ERR_CANNOTINIT, _("InternalBackup"));
       return -1;
-   }
+    }
 
-   if ((BiosRom = T2MemoryInit(0x80000)) == NULL)
+    fseek(pbackup, 0, SEEK_SET);
+    if (CheckBackupFile(pbackup) != 0) {
+      FormatBackupRamFile(pbackup, tweak_backup_file_size);
+    }
+    else {
+      ExtendBackupFile(pbackup, tweak_backup_file_size);
+    }
+    fclose(pbackup);
+    BupRam = YabMemMap((char *)bupfilename, tweak_backup_file_size);
+    if (BupRam == NULL) {  // fall back to old version
+      if ((BupRam = T1MemoryInit(0x10000)) == NULL)
+        return -1;
+
+      if (LoadBackupRam(init->buppath) != 0)
+        FormatBackupRam(BupRam, 0x10000);
+
+      BupRamWritten = 0;
+      yabsys.extend_backup = 0;
+    }
+
+  }
+  else {
+    if ((BupRam = T1MemoryInit(0x10000)) == NULL)
       return -1;
 
-   if ((HighWram = T2MemoryInit(0x100000)) == NULL)
-      return -1;
+    if (LoadBackupRam(init->buppath) != 0)
+      FormatBackupRam(BupRam, 0x10000);
+    BupRamWritten = 0;
+  }
 
-   if ((LowWram = T2MemoryInit(0x100000)) == NULL)
-      return -1;
+  // Initialize cartridge
+  if (CartInit(init->cartpath, init->carttype) != 0)
+  {
+    YabSetError(YAB_ERR_CANNOTINIT, _("Cartridge"));
+    return -1;
+  }
 
-   yabsys.extend_backup = init->extend_backup;
-   if (yabsys.extend_backup) {
-     FILE * pbackup;
-     bupfilename = init->buppath;
-     pbackup = fopen(bupfilename, "a+b");
-     if (pbackup == NULL) {
-       YabSetError(YAB_ERR_CANNOTINIT, _("InternalBackup"));
-       return -1;
-     }
+  MappedMemoryInit();
 
-     fseek(pbackup, 0, SEEK_SET);
-     if (CheckBackupFile(pbackup) != 0) {
-       FormatBackupRamFile(pbackup, tweak_backup_file_size);
-     }
-     else {
-       ExtendBackupFile(pbackup, tweak_backup_file_size);
-     }
-     fclose(pbackup);
-     BupRam = YabMemMap(bupfilename, tweak_backup_file_size);
-     if (BupRam == NULL) {  // fall back to old version
-       if ((BupRam = T1MemoryInit(0x10000)) == NULL)
-         return -1;
+  // Video initialization and settings
+  VideoSetSetting(VDP_SETTING_RBG_USE_COMPUTESHADER, init->rbg_use_compute_shader);
+  VideoSetSetting(VDP_SETTING_RBG_RESOLUTION_MODE, init->rbg_resolution_mode);
 
-       if (LoadBackupRam(init->buppath) != 0)
-         FormatBackupRam(BupRam, 0x10000);
+  if (VideoInit(init->vidcoretype) != 0)
+  {
+    YabSetError(YAB_ERR_CANNOTINIT, _("Video"));
+    return -1;
+  }
 
-       BupRamWritten = 0;
-       yabsys.extend_backup = 0;
-     }
+  VideoSetSetting(VDP_SETTING_FILTERMODE, init->video_filter_type);
+  VideoSetSetting(VDP_SETTING_POLYGON_MODE, init->polygon_generation_mode);
+  VideoSetSetting(VDP_SETTING_RESOLUTION_MODE, init->resolution_mode);
+  VideoSetSetting(VDP_SETTING_ROTATE_SCREEN, init->rotate_screen);
+  VideoSetSetting(VDP_SETTING_RBG_USE_COMPUTESHADER, init->rbg_use_compute_shader);
+  VideoSetSetting(VDP_SETTING_RBG_RESOLUTION_MODE, init->rbg_resolution_mode);
 
-   }
-   else {
-     if ((BupRam = T1MemoryInit(0x10000)) == NULL)
-       return -1;
+  // Initialize input peripherals
+  if (PerInit(init->percoretype) != 0)
+  {
+    YabSetError(YAB_ERR_CANNOTINIT, _("Peripheral"));
+    return -1;
+  }
 
-     if (LoadBackupRam(init->buppath) != 0)
-       FormatBackupRam(BupRam, 0x10000);
-     BupRamWritten = 0;
-   }
-   
-   // check if format is needed?
-
-   if (CartInit(init->cartpath, init->carttype) != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("Cartridge"));
-      return -1;
-   }
-
-   MappedMemoryInit();
-
-   VideoSetSetting(VDP_SETTING_RBG_USE_COMPUTESHADER, init->rbg_use_compute_shader);
-   VideoSetSetting(VDP_SETTING_RBG_RESOLUTION_MODE, init->rbg_resolution_mode);
-
-   if (VideoInit(init->vidcoretype) != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("Video"));
-      return -1;
-   }
-
-   // Settings
-   VideoSetSetting(VDP_SETTING_FILTERMODE,init->video_filter_type);
-   VideoSetSetting(VDP_SETTING_POLYGON_MODE, init->polygon_generation_mode);
-   VideoSetSetting(VDP_SETTING_RESOLUTION_MODE, init->resolution_mode);
-   VideoSetSetting(VDP_SETTING_ROTATE_SCREEN, init->rotate_screen);
-   VideoSetSetting(VDP_SETTING_RBG_USE_COMPUTESHADER, init->rbg_use_compute_shader);
-   VideoSetSetting(VDP_SETTING_RBG_RESOLUTION_MODE, init->rbg_resolution_mode);
-
-
-   // Initialize input core
-   if (PerInit(init->percoretype) != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("Peripheral"));
-      return -1;
-   }
-
-   if (Cs2Init(init->carttype, init->cdcoretype, init->cdpath, init->mpegpath, init->modemip, init->modemport) != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("CS2"));
-      return -1;
-   }
+  if (Cs2Init(init->carttype, init->cdcoretype, init->cdpath, init->mpegpath, init->modemip, init->modemport) != 0)
+  {
+    YabSetError(YAB_ERR_CANNOTINIT, _("CS2"));
+     return -1;
+  }
 
    if (ScuInit() != 0)
    {
@@ -312,9 +390,10 @@ int YabauseInit(yabauseinit_struct *init)
       return -1;
    }
 
-   YabauseSetVideoFormat(init->videoformattype);
-   YabauseChangeTiming(CLKTYPE_26MHZ);
-   yabsys.DecilineMode = 1;
+    YabauseSetVideoFormat(init->videoformattype);
+    yabsys.CurSH2FreqType = selected_clock;
+    YabauseChangeTiming(yabsys.CurSH2FreqType);
+    yabsys.DecilineMode = 1;
 
    if (init->frameskip)
       EnableAutoFrameSkip();
@@ -601,7 +680,6 @@ u32 YabauseGetFrameCount() {
 }
 
 //#define YAB_STATICS
-void SyncCPUtoSCSP();
 u64 getM68KCounter();
 u64 g_m68K_dec_cycle = 0;
 
@@ -736,7 +814,11 @@ int YabauseEmulate(void) {
          yabsys.LineCount++;
          if (yabsys.LineCount == yabsys.VBlankLineCount) {
 #if defined(ASYNC_SCSP)
-            setM68kCounter((u64)(44100 * 256 / 60) << SCSP_FRACTIONAL_BITS);
+#include <stdint.h> // Make sure this is included at the top of your file
+
+#define SAFE_SHIFT(x, s) ((s) >= 64 ? 0 : ((x) << (s)))
+u64 cycles = (44100ULL * 256ULL) / 60ULL;
+setM68kCounter(SAFE_SHIFT(cycles, SCSP_FRACTIONAL_BITS));
 #endif
             PROFILE_START("vblankin");
             // VBlankIN
@@ -852,16 +934,17 @@ int YabauseEmulate(void) {
    return 0;
 }
 
-
-void SyncCPUtoSCSP() {
-  //LOG("[SH2] WAIT SCSP");
-  if (g_scsp_main_mode == 0) {
-    YabWaitEventQueue(q_scsp_finish);
-    saved_m68k_cycles = 0;
-    setM68kCounter(saved_m68k_cycles);
-    YabAddEventQueue(q_scsp_frame_start, 0);
-  }
-  //LOG("[SH2] START SCSP");
+static void SyncCPUtoSCSP(void)
+{
+   if (g_scsp_main_mode == 0)
+   {
+      g_scsp_sample_counter += SCSP_CYCLE_RATIO;
+      if (g_scsp_sample_counter >= (44100 / 60))
+      {
+         g_scsp_sample_counter -= (44100 / 60);
+         setM68kCounter(SAFE_SHIFT((u64)(44100ULL * 256ULL / 60ULL), SCSP_FRACTIONAL_BITS));
+      }
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1326,6 +1409,5 @@ char* strdup_ (const char* s)
   memcpy(result, s, slen+1);
   return result;
 }
-
 
 //////////////////////////////////////////////////////////////////////////////

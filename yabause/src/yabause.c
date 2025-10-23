@@ -141,302 +141,370 @@ void YabauseChangeTiming(int freqtype) {
 
    const double freq_base = yabsys.IsPal ? 28437500.0
       : (39375000.0 / 11.0) * 8.0;  // i.e. 8 * 3.579545... = 28.636363... MHz
-   const double freq_mult = (freqtype == CLKTYPE_26MHZ) ? 15.0/16.0 : 1.0;
+
+
+double freq_mult = 1.0;
+
+switch (freqtype)
+{
+   case CLKTYPE_1MHZ:  freq_mult = 1.0  / 28.0; break;
+   case CLKTYPE_2MHZ:  freq_mult = 2.0  / 28.0; break;
+   case CLKTYPE_3MHZ:  freq_mult = 3.0  / 28.0; break;
+   case CLKTYPE_4MHZ:  freq_mult = 4.0  / 28.0; break;
+   case CLKTYPE_5MHZ:  freq_mult = 5.0  / 28.0; break;
+   case CLKTYPE_6MHZ:  freq_mult = 6.0  / 28.0; break;
+   case CLKTYPE_7MHZ:  freq_mult = 7.0  / 28.0; break;
+   case CLKTYPE_8MHZ:  freq_mult = 8.0  / 28.0; break;
+   case CLKTYPE_9MHZ:  freq_mult = 9.0  / 28.0; break;
+   case CLKTYPE_10MHZ: freq_mult = 10.0 / 28.0; break;
+   case CLKTYPE_11MHZ: freq_mult = 11.0 / 28.0; break;
+   case CLKTYPE_12MHZ: freq_mult = 12.0 / 28.0; break;
+   case CLKTYPE_13MHZ: freq_mult = 13.0 / 28.0; break;
+   case CLKTYPE_14MHZ: freq_mult = 14.0 / 28.0; break;
+   case CLKTYPE_15MHZ: freq_mult = 15.0 / 28.0; break;
+   case CLKTYPE_16MHZ: freq_mult = 16.0 / 28.0; break;
+   case CLKTYPE_17MHZ: freq_mult = 17.0 / 28.0; break;
+   case CLKTYPE_18MHZ: freq_mult = 18.0 / 28.0; break;
+   case CLKTYPE_19MHZ: freq_mult = 19.0 / 28.0; break;
+   case CLKTYPE_20MHZ: freq_mult = 20.0 / 28.0; break;
+   case CLKTYPE_21MHZ: freq_mult = 21.0 / 28.0; break;
+   case CLKTYPE_22MHZ: freq_mult = 22.0 / 28.0; break;
+   case CLKTYPE_23MHZ: freq_mult = 23.0 / 28.0; break;
+   case CLKTYPE_24MHZ: freq_mult = 24.0 / 28.0; break;
+   case CLKTYPE_25MHZ: freq_mult = 25.0 / 28.0; break;
+
+   // Keep legacy special case if still wanted:
+   case CLKTYPE_26MHZ: freq_mult = 15.0 / 16.0; break;
+
+   case CLKTYPE_27MHZ: freq_mult = 27.0 / 28.0; break;
+   case CLKTYPE_28MHZ: freq_mult = 28.0 / 28.0; break; // equals 1.0
+   case CLKTYPE_29MHZ: freq_mult = 29.0 / 28.0; break;
+   case CLKTYPE_30MHZ: freq_mult = 30.0 / 28.0; break;
+   case CLKTYPE_31MHZ: freq_mult = 31.0 / 28.0; break;
+   case CLKTYPE_32MHZ: freq_mult = 32.0 / 28.0; break;
+   case CLKTYPE_33MHZ: freq_mult = 33.0 / 28.0; break;
+   case CLKTYPE_34MHZ: freq_mult = 34.0 / 28.0; break;
+   case CLKTYPE_35MHZ: freq_mult = 35.0 / 28.0; break;
+   case CLKTYPE_36MHZ: freq_mult = 36.0 / 28.0; break;
+   case CLKTYPE_37MHZ: freq_mult = 37.0 / 28.0; break;
+   case CLKTYPE_38MHZ: freq_mult = 38.0 / 28.0; break;
+   default:
+         freq_mult = 1.0;
+         break;
+   }
+
    const double freq_shifted = (freq_base * freq_mult) * (1 << YABSYS_TIMING_BITS);
    const double usec_shifted = 1.0e6 * (1 << YABSYS_TIMING_BITS);
    const double deciline_time = yabsys.IsPal ? 1.0 /  50        / 313 / 10
-                                             : 1.0 / (60/1.001) / 263 / 10;
+                                             : 1.0 / (60 / 1.001) / 263 / 10;
 
    yabsys.DecilineCount = 0;
    yabsys.LineCount = 0;
    yabsys.CurSH2FreqType = freqtype;
-   yabsys.DecilineStop = (u32) (freq_shifted * deciline_time + 0.5);
+   yabsys.DecilineStop = (u32)(freq_shifted * deciline_time + 0.5);
    yabsys.SH2CycleFrac = 0;
-   yabsys.DecilineUsec = (u32) (usec_shifted * deciline_time + 0.5);
+   yabsys.DecilineUsec = (u32)(usec_shifted * deciline_time + 0.5);
    yabsys.UsecFrac = 0;
 }
 
+
 //////////////////////////////////////////////////////////////////////////////
 
-int YabauseInit(yabauseinit_struct *init)
+int YabauseInit(yabauseinit_struct *init, int selected_clock)
 {
+    static int user_selected_clktype = CLKTYPE_28MHZ;
+
 #ifdef ENABLE_TSUNAMI
-   tsunami_init();
+    tsunami_init();
 #endif
 
-   // Need to set this first, so init routines see it
-   yabsys.UseThreads = init->usethreads;
-   yabsys.NumThreads = init->numthreads;
-   yabsys.use_cd_block_lle = init->use_cd_block_lle;
-   if (yabsys.use_cd_block_lle)
-   {
-      yabsys.use_sh2_dma_timing = 1;
-      yabsys.use_scu_dma_timing = 1;
-      yabsys.sh2_cache_enabled = 1;
-   }
-   else
-   {
-      yabsys.use_sh2_dma_timing = init->use_sh2_dma_timing;
-      yabsys.use_scu_dma_timing = init->use_scu_dma_timing;
-      yabsys.sh2_cache_enabled = init->sh2_cache_enabled;
-   }
+    // Need to set this first, so init routines see it
+    yabsys.UseThreads = init->usethreads;
+    yabsys.NumThreads = init->numthreads;
+    yabsys.use_cd_block_lle = init->use_cd_block_lle;
 
-   // Initialize both cpu's
-   if (SH2Init(init->sh2coretype) != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("SH2"));
-      return -1;
-   }
+    if (yabsys.use_cd_block_lle)
+    {
+        yabsys.use_sh2_dma_timing = 1;
+        yabsys.use_scu_dma_timing = 1;
+        yabsys.sh2_cache_enabled = 1;
+    }
+    else
+    {
+        yabsys.use_sh2_dma_timing = init->use_sh2_dma_timing;
+        yabsys.use_scu_dma_timing = init->use_scu_dma_timing;
+        yabsys.sh2_cache_enabled = init->sh2_cache_enabled;
+    }
 
-   if ((BiosRom = T2MemoryInit(0x80000)) == NULL)
-      return -1;
+    yabsys.CurSH2FreqType = selected_clock;
 
-   if ((HighWram = T2MemoryInit(0x100000)) == NULL)
-      return -1;
+    // Initialize both cpu's
+    if (SH2Init(init->sh2coretype) != 0)
+    {
+        YabSetError(YAB_ERR_CANNOTINIT, _("SH2"));
+        return -1;
+    }
 
-   if ((LowWram = T2MemoryInit(0x100000)) == NULL)
-      return -1;
+    if ((BiosRom = T2MemoryInit(0x80000)) == NULL)
+        return -1;
 
-   if ((BupRam = T1MemoryInit(0x10000)) == NULL)
-      return -1;
+    if ((HighWram = T2MemoryInit(0x100000)) == NULL)
+        return -1;
 
-   if (LoadBackupRam(init->buppath) != 0)
-      FormatBackupRam(BupRam, 0x10000);
+    if ((LowWram = T2MemoryInit(0x100000)) == NULL)
+        return -1;
 
-   BupRamWritten = 0;
+    if ((BupRam = T1MemoryInit(0x10000)) == NULL)
+        return -1;
 
-   bupfilename = init->buppath;
+    if (LoadBackupRam(init->buppath) != 0)
+        FormatBackupRam(BupRam, 0x10000);
 
-   if (CartInit(init->cartpath, init->carttype) != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("Cartridge"));
-      return -1;
-   }
+    BupRamWritten = 0;
 
-   if (VideoInit(init->vidcoretype) != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("Video"));
-      return -1;
-   }
+    bupfilename = init->buppath;
 
-   // Initialize input core
-   if (PerInit(init->percoretype) != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("Peripheral"));
-      return -1;
-   }
+    if (CartInit(init->cartpath, init->carttype) != 0)
+    {
+        YabSetError(YAB_ERR_CANNOTINIT, _("Cartridge"));
+        return -1;
+    }
 
-   if ((SH1Rom = T2MemoryInit(0x10000)) == NULL)
-      return -1;
+    if (VideoInit(init->vidcoretype) != 0)
+    {
+        YabSetError(YAB_ERR_CANNOTINIT, _("Video"));
+        return -1;
+    }
 
-   if ((SH1Dram = T2MemoryInit(0x80000)) == NULL)
-      return -1;
+    // Initialize input core
+    if (PerInit(init->percoretype) != 0)
+    {
+        YabSetError(YAB_ERR_CANNOTINIT, _("Peripheral"));
+        return -1;
+    }
 
-   if ((SH1MpegRom = T2MemoryInit(0x80000)) == NULL)
-      return -1;
+    if ((SH1Rom = T2MemoryInit(0x10000)) == NULL)
+        return -1;
 
-   // Initialize CD Block 
-   if (init->use_cd_block_lle)
-   {
+    if ((SH1Dram = T2MemoryInit(0x80000)) == NULL)
+        return -1;
+
+    if ((SH1MpegRom = T2MemoryInit(0x80000)) == NULL)
+        return -1;
+
+    // Initialize CD Block 
+    if (init->use_cd_block_lle)
+    {
 #if defined(SH2_DYNAREC)
-      if (init->sh1coretype == SH2CORE_DYNAREC)
-      {
-         YabSetError(YAB_ERR_CANNOTINIT, _("SH1. Dynarec core not supported for SH1 emulation."));
-         return -1;
-      }
+        if (init->sh1coretype == SH2CORE_DYNAREC)
+        {
+            YabSetError(YAB_ERR_CANNOTINIT, _("SH1. Dynarec core not supported for SH1 emulation."));
+            return -1;
+        }
 #endif
 
-      if (SH1Init(init->sh1coretype) != 0)
-      {
-         YabSetError(YAB_ERR_CANNOTINIT, _("SH1"));
-         return -1;
-      }
-      else
-      {
-         if (init->sh1rompath != NULL && strlen(init->sh1rompath))
-         {
-            if (LoadSH1Rom(init->sh1rompath) != 0)
-            {
-               YabSetError(YAB_ERR_FILENOTFOUND, (void *)init->sh1rompath);
-               return -2;
-            }
-         }
-         else
-         {
-            YabSetError(YAB_ERR_CANNOTINIT, _("CD Block. It needs a SH1 ROM Defined."));
+        if (SH1Init(init->sh1coretype) != 0)
+        {
+            YabSetError(YAB_ERR_CANNOTINIT, _("SH1"));
             return -1;
-         }
-
-         if (init->mpegpath != NULL && strlen(init->mpegpath))
-         {
-            if (LoadMpegRom(init->mpegpath) != 0)
+        }
+        else
+        {
+            if (init->sh1rompath != NULL && strlen(init->sh1rompath))
             {
-               YabSetError(YAB_ERR_FILENOTFOUND, (void *)init->mpegpath);
-               return -2;
+                if (LoadSH1Rom(init->sh1rompath) != 0)
+                {
+                    YabSetError(YAB_ERR_FILENOTFOUND, (void *)init->sh1rompath);
+                    return -2;
+                }
             }
-         }
-      }
-   }
+            else
+            {
+                YabSetError(YAB_ERR_CANNOTINIT, _("CD Block. It needs a SH1 ROM Defined."));
+                return -1;
+            }
 
-   if (Cs2Init(init->carttype, init->cdcoretype, init->cdpath, init->mpegpath, init->modemip, init->modemport) != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("CS2"));
-      return -1;
-   }
+            if (init->mpegpath != NULL && strlen(init->mpegpath))
+            {
+                if (LoadMpegRom(init->mpegpath) != 0)
+                {
+                    YabSetError(YAB_ERR_FILENOTFOUND, (void *)init->mpegpath);
+                    return -2;
+                }
+            }
+        }
+    }
 
-   yabsys.use_scu_dsp_jit = init->use_scu_dsp_jit;
+    if (Cs2Init(init->carttype, init->cdcoretype, init->cdpath, init->mpegpath, init->modemip, init->modemport) != 0)
+    {
+        YabSetError(YAB_ERR_CANNOTINIT, _("CS2"));
+        return -1;
+    }
 
-   if (ScuInit() != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("SCU"));
-      return -1;
-   }
+    yabsys.use_scu_dsp_jit = init->use_scu_dsp_jit;
 
-   if (M68KInit(init->m68kcoretype) != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("M68K"));
-      return -1;
-   }
+    if (ScuInit() != 0)
+    {
+        YabSetError(YAB_ERR_CANNOTINIT, _("SCU"));
+        return -1;
+    }
 
-   if (ScspInit(init->sndcoretype) != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("SCSP/M68K"));
-      return -1;
-   }
+    if (M68KInit(init->m68kcoretype) != 0)
+    {
+        YabSetError(YAB_ERR_CANNOTINIT, _("M68K"));
+        return -1;
+    }
 
-   if (Vdp1Init() != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("VDP1"));
-      return -1;
-   }
+    if (ScspInit(init->sndcoretype) != 0)
+    {
+        YabSetError(YAB_ERR_CANNOTINIT, _("SCSP/M68K"));
+        return -1;
+    }
 
-   if (Vdp2Init() != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("VDP2"));
-      return -1;
-   }
+    if (Vdp1Init() != 0)
+    {
+        YabSetError(YAB_ERR_CANNOTINIT, _("VDP1"));
+        return -1;
+    }
 
-   if (SmpcInit(init->regionid, init->clocksync, init->basetime) != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("SMPC"));
-      return -1;
-   }
+    if (Vdp2Init() != 0)
+    {
+        YabSetError(YAB_ERR_CANNOTINIT, _("VDP2"));
+        return -1;
+    }
 
-   if (CheatInit() != 0)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("Cheat System"));
-      return -1;
-   }
+    if (SmpcInit(init->regionid, init->clocksync, init->basetime) != 0)
+    {
+        YabSetError(YAB_ERR_CANNOTINIT, _("SMPC"));
+        return -1;
+    }
 
-   MappedMemoryInit(MSH2, SSH2, SH1);
-   YabauseSetVideoFormat(init->videoformattype);
-   YabauseChangeTiming(CLKTYPE_26MHZ);
-   yabsys.DecilineMode = 1;
+    if (CheatInit() != 0)
+    {
+        YabSetError(YAB_ERR_CANNOTINIT, _("Cheat System"));
+        return -1;
+    }
 
-   if (init->frameskip)
-      EnableAutoFrameSkip();
+MappedMemoryInit(MSH2, SSH2, SH1);
+YabauseSetVideoFormat(init->videoformattype);
+yabsys.CurSH2FreqType = selected_clock;
+YabauseChangeTiming(selected_clock);
+yabsys.DecilineMode = 1;
+
+    if (init->frameskip)
+        EnableAutoFrameSkip();
 
 #ifdef YAB_PORT_OSD
-   OSDChangeCore(init->osdcoretype);
+    OSDChangeCore(init->osdcoretype);
 #else
-   OSDChangeCore(OSDCORE_DEFAULT);
+    OSDChangeCore(OSDCORE_DEFAULT);
 #endif
 
-   if (init->biospath != NULL && strlen(init->biospath))
-   {
-      if (LoadBios(init->biospath) != 0)
-      {
-         YabSetError(YAB_ERR_FILENOTFOUND, (void *)init->biospath);
-         return -2;
-      }
-      yabsys.emulatebios = 0;
-   }
-   else
-      yabsys.emulatebios = 1;
+    if (init->biospath != NULL && strlen(init->biospath))
+    {
+        if (LoadBios(init->biospath) != 0)
+        {
+            YabSetError(YAB_ERR_FILENOTFOUND, (void *)init->biospath);
+            return -2;
+        }
+        yabsys.emulatebios = 0;
+    }
+    else
+        yabsys.emulatebios = 1;
 
-   if (yabsys.emulatebios && yabsys.use_cd_block_lle)
-   {
-      YabSetError(YAB_ERR_CANNOTINIT, _("CD Block. A real bios must be defined and enabled for CD Block LLE. Emulated bios not supported."));
-      return -1;
-   }
+    if (yabsys.emulatebios && yabsys.use_cd_block_lle)
+    {
+        YabSetError(YAB_ERR_CANNOTINIT, _("CD Block. A real bios must be defined and enabled for CD Block LLE. Emulated bios not supported."));
+        return -1;
+    }
 
-   yabsys.usequickload = 0;
+    yabsys.usequickload = 0;
 
-   #if defined(SH2_DYNAREC)
-   if(SH2Core->id==2) {
-     sh2_dynarec_init();
-   }
-   #endif
+#if defined(SH2_DYNAREC)
+    if (SH2Core->id == 2)
+    {
+        sh2_dynarec_init();
+    }
+#endif
 
-   YabauseResetNoLoad();
+    YabauseResetNoLoad();
 
 #ifdef YAB_WANT_SSF
 
-   if (init->play_ssf && init->ssfpath != NULL && strlen(init->ssfpath))
-   {
-      if (!load_ssf((char*)init->ssfpath, init->m68kcoretype, init->sndcoretype))
-      {
-         YabSetError(YAB_ERR_FILENOTFOUND, (void *)init->ssfpath);
+    if (init->play_ssf && init->ssfpath != NULL && strlen(init->ssfpath))
+    {
+        if (!load_ssf((char*)init->ssfpath, init->m68kcoretype, init->sndcoretype))
+        {
+            YabSetError(YAB_ERR_FILENOTFOUND, (void *)init->ssfpath);
 
-         yabsys.playing_ssf = 0;
+            yabsys.playing_ssf = 0;
 
-         return -2;
-      }
+            return -2;
+        }
 
-      yabsys.playing_ssf = 1;
+        yabsys.playing_ssf = 1;
 
-      get_ssf_info(1, ssf_track_name);
-      get_ssf_info(3, ssf_artist);
+        get_ssf_info(1, ssf_track_name);
+        get_ssf_info(3, ssf_artist);
 
-      return 0;
-   }
-   else
-      yabsys.playing_ssf = 0;
+        return 0;
+    }
+    else
+    {
+        yabsys.playing_ssf = 0;
+    }
 
 #endif
 
-   if (init->skip_load)
-   {
-	   return 0;
-   }
+    if (init->skip_load)
+    {
+        return 0;
+    }
 
-   if (yabsys.usequickload || yabsys.emulatebios)
-   {
-      if (YabauseQuickLoadGame() != 0)
-      {
-         if (yabsys.emulatebios)
-         {
-            YabSetError(YAB_ERR_CANNOTINIT, _("Game"));
-            return -2;
-         }
-         else
-            YabauseResetNoLoad();
-      }
-   }
+    if (yabsys.usequickload || yabsys.emulatebios)
+    {
+        if (YabauseQuickLoadGame() != 0)
+        {
+            if (yabsys.emulatebios)
+            {
+                YabSetError(YAB_ERR_CANNOTINIT, _("Game"));
+                return -2;
+            }
+            else
+            {
+                YabauseResetNoLoad();
+            }
+        }
+    }
 
+    return 0;
+}
+
+int YabauseInitThreads(yabauseinit_struct *init)
+{
 #ifdef HAVE_GDBSTUB
    GdbStubInit(MSH2, 43434);
 #endif
 
-   if (yabsys.UseThreads)
-   {
-      int num = yabsys.NumThreads < 1 ? 1 : yabsys.NumThreads;
-      VIDSoftSetVdp1ThreadEnable(num == 1 ? 0 : 1);
-      VIDSoftSetNumLayerThreads(num);
-      VIDSoftSetNumPriorityThreads(num);
-   }
-   else
-   {
-      VIDSoftSetVdp1ThreadEnable(0);
-      VIDSoftSetNumLayerThreads(0);
-      VIDSoftSetNumPriorityThreads(0);
-   }
+if (yabsys.UseThreads)
+{
+   int num = yabsys.NumThreads < 1 ? 1 : yabsys.NumThreads;
+   VIDSoftSetVdp1ThreadEnable(num == 1 ? 0 : 1);
+   VIDSoftSetNumLayerThreads(num);
+   VIDSoftSetNumPriorityThreads(num);
+}
+else
+{
+   VIDSoftSetVdp1ThreadEnable(0);
+   VIDSoftSetNumLayerThreads(0);
+   VIDSoftSetNumPriorityThreads(0);
+}
 
-   yabsys.use_scsp_dsp_jit = init->use_scsp_dsp_dynarec;
+yabsys.use_scsp_dsp_jit = init->use_scsp_dsp_dynarec;
 
-   scsp_set_use_new(init->use_new_scsp);
+scsp_set_use_new(init->use_new_scsp);
 
-   return 0;
+return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -543,6 +611,7 @@ void YabauseReset(void) {
       }
    }
 }
+
 
 //////////////////////////////////////////////////////////////////////////////
 

@@ -1,6 +1,9 @@
 #ifndef LIBRETRO_CORE_OPTIONS_H__
 #define LIBRETRO_CORE_OPTIONS_H__
 
+#define FRAMESKIP_MAX_DEFAULT "3"
+#define FRAMESKIP_TURBOBOOST_DEFAULT "6"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -48,7 +51,109 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "enabled", NULL },
          { NULL, NULL},
       },
-      "disabled"
+      "enabled"
+   },
+   {
+   "frameskip_max",
+   "Auto Frameskip: Max Frames Skipped",
+   "Set the maximum number of consecutive frames that can be skipped automatically. Useful for balancing performance and smoothness.",
+   NULL,
+   NULL,
+   NULL,
+   {
+      { "1", NULL },
+      { "2", NULL },
+      { "3", NULL },
+      { "4", NULL },
+      { "5", NULL },
+      { "6", NULL },
+      { "7", NULL },
+      { "8", NULL },
+      { "9", NULL },
+      { NULL, NULL },
+   },
+   "1"
+   },
+   {   
+   "frameskip_turboboost",
+   "Auto Frameskip: Turbo Boost Threshold",
+   "Controls how aggressively the emulator skips frames based on timing. Lower values make skipping more responsive.",
+   NULL,
+   NULL,
+   NULL,
+   {
+      { "2", NULL },
+      { "3", NULL },
+      { "4", NULL },
+      { "5", NULL },
+      { "6", NULL },
+      { "7", NULL },
+      { "8", NULL },
+      { "9", NULL },
+      { "10", NULL },
+      { "11", NULL },
+      { "12", NULL },
+      { "13", NULL },
+      { "14", NULL },
+      { "15", NULL },
+      { "16", NULL },
+      { "17", NULL },
+      { "18", NULL },
+      { "19", NULL },
+      { "20", NULL },
+      { NULL, NULL },
+   },
+   "20"
+   },
+   {
+  "yabause_sh2_clock_speed",
+  "SH2 Clock Speed (MHz)",
+  NULL,
+  "Set the SH-2 CPU clock speed to balance performance and accuracy.",
+  NULL,
+  NULL,
+   {
+      { "1", NULL },
+      { "2", NULL },
+      { "3", NULL },
+      { "4", NULL },
+      { "5", NULL },
+      { "6", NULL },
+      { "7", NULL },
+      { "8", NULL },
+      { "9", NULL },
+      { "10", NULL },
+      { "11", NULL },
+      { "12", NULL },
+      { "13", NULL },
+      { "14", NULL },
+      { "15", NULL },
+      { "16", NULL },
+      { "17", NULL },
+      { "18", NULL },
+      { "19", NULL },
+      { "20", NULL },
+      { "21", NULL },
+      { "22", NULL },
+      { "23", NULL },
+      { "24", NULL },
+      { "25", NULL },
+      { "26", NULL },
+      { "27", NULL },
+      { "28", NULL },
+      { "29", NULL },
+      { "30", NULL },
+      { "31", NULL },
+      { "32", NULL },
+      { "33", NULL },
+      { "34", NULL },
+      { "35", NULL },
+      { "36", NULL },
+      { "37", NULL },
+      { "38", NULL },
+      { NULL, NULL },
+   },
+   "18"
    },
    {
       "yabause_force_hle_bios",
@@ -62,7 +167,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "enabled", NULL },
          { NULL, NULL},
       },
-      "disabled"
+      "enabled"
    },
    {
       "yabause_addon_cartridge",
@@ -77,7 +182,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "4M_ram", "4MB RAM" },
          { NULL, NULL},
       },
-      "none"
+      "4M_ram"
    },
    {
       "yabause_multitap_port1",
@@ -124,7 +229,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "32", NULL },
          { NULL, NULL},
       },
-      "4"
+      "1"
    },
 #endif
    { NULL, NULL, NULL, NULL, NULL, NULL, {{0}}, NULL },

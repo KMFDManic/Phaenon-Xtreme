@@ -52,7 +52,7 @@ endif
 
 CORE_DIR := .
 
-TARGET_NAME = km_phaenon_xtreme
+TARGET_NAME = km_phaenon_xtreme_amped
 CC_AS ?= $(CC)
 
 # Unix

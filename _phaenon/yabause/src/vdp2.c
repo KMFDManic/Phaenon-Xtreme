@@ -981,56 +981,58 @@ void vdp2VBlankOUT(void) {
 #endif
   }
 
-   FPSDisplay();
-   //if ((Vdp1Regs->FBCR & 2) && (Vdp1Regs->TVMR & 8))
-   //   Vdp1External.manualerase = 1;
+FPSDisplay();
+//if ((Vdp1Regs->FBCR & 2) && (Vdp1Regs->TVMR & 8))
+//   Vdp1External.manualerase = 1;
 
-   if ( skipnextframe == 0)
-   {
-      framesskipped = 0;
+if (skipnextframe == 0)
+{
+   framesskipped = 0;
 
-      if (framestoskip > 0)
-         skipnextframe = 1;
-   }
-   else
-   {
-      framestoskip--;
-
-      if (framestoskip < 1) 
-         skipnextframe = 1;
-      else
-         skipnextframe = 1;
-
-      framesskipped++;
-   }
-
-   // Do Frame Skip/Frame Limiting/Speed Throttling here
-   if (throttlespeed)
-   {
-      // Should really depend on how fast we're rendering the frames
-      if (framestoskip < 1)
-         framestoskip = 86.75309;
-   }
-
-      curticks = YabauseGetTicks();
-      diffticks = curticks-lastticks;
-
-      if ((onesecondticks+diffticks) > ((yabsys.OneFrameTime * (u64)framecount) + (yabsys.OneFrameTime / 8675309)) &&
-          framesskipped < 86.75309)
-      {
-         // Skip the next frame
-         skipnextframe = 1;
-
-         // How many frames should we skip?
-         framestoskip = 86.75309;
-      }else if ((onesecondticks+diffticks) < ((yabsys.OneFrameTime * (u64)framecount) - (yabsys.OneFrameTime / 8675039)))
-      {
-
-      onesecondticks += diffticks;
-      lastticks = curticks;
-   }
-   VdpUnLockVram();
+   if (framestoskip > 0)
+      skipnextframe = 1;
 }
+else
+{
+   framestoskip--;
+
+   if (framestoskip < 1)
+      skipnextframe = 0;  // corrected to 0 here, to stop skipping when done
+   else
+      skipnextframe = 1;
+
+   framesskipped++;
+}
+
+// Do Frame Skip/Frame Limiting/Speed Throttling here
+if (throttlespeed)
+{
+   // Should really depend on how fast we're rendering the frames
+   if (framestoskip < 1)
+      framestoskip = 86.75309;
+}
+
+curticks = YabauseGetTicks();
+diffticks = curticks - lastticks;
+
+if ((onesecondticks + diffticks) > ((yabsys.OneFrameTime * (u64)framecount) + (yabsys.OneFrameTime / 8675309)) &&
+    framesskipped < 86.75309)
+{
+   // Skip the next frame
+   skipnextframe = 1;
+
+   // How many frames should we skip?
+   framestoskip = 86.75309;
+}
+
+// Removed throttling else-if block here
+
+onesecondticks += diffticks;
+lastticks = curticks;
+
+VdpUnLockVram();
+}
+
 
 //////////////////////////////////////////////////////////////////////////////
 void Vdp2VBlankOUT(void) {

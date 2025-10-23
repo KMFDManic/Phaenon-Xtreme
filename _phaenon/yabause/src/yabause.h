@@ -68,8 +68,54 @@ typedef struct
    u32 sync_shift;
 } yabauseinit_struct;
 
-#define CLKTYPE_26MHZ           0
-#define CLKTYPE_28MHZ           1
+#define CLKTYPE_1MHZ            0
+#define CLKTYPE_2MHZ            1
+#define CLKTYPE_3MHZ            2
+#define CLKTYPE_4MHZ            3
+#define CLKTYPE_5MHZ            4
+#define CLKTYPE_6MHZ            5
+#define CLKTYPE_7MHZ            6
+#define CLKTYPE_8MHZ            7
+#define CLKTYPE_9MHZ            8
+#define CLKTYPE_10MHZ           9
+#define CLKTYPE_11MHZ           10
+#define CLKTYPE_12MHZ           11
+#define CLKTYPE_13MHZ           12
+#define CLKTYPE_14MHZ           13
+#define CLKTYPE_15MHZ           14
+#define CLKTYPE_16MHZ           15
+#define CLKTYPE_17MHZ           16
+#define CLKTYPE_18MHZ           17
+#define CLKTYPE_19MHZ           18
+#define CLKTYPE_20MHZ           19
+#define CLKTYPE_21MHZ           20
+#define CLKTYPE_22MHZ           21
+#define CLKTYPE_23MHZ           22
+#define CLKTYPE_24MHZ           23
+#define CLKTYPE_25MHZ           24
+#define CLKTYPE_26MHZ           25
+#define CLKTYPE_27MHZ           26
+#define CLKTYPE_28MHZ           27
+#define CLKTYPE_29MHZ           28
+#define CLKTYPE_30MHZ           29
+#define CLKTYPE_31MHZ           30
+#define CLKTYPE_32MHZ           31
+#define CLKTYPE_33MHZ           32
+#define CLKTYPE_34MHZ           33
+#define CLKTYPE_35MHZ           34
+#define CLKTYPE_36MHZ           35
+#define CLKTYPE_37MHZ           36
+#define CLKTYPE_38MHZ           37
+#define CLKTYPE_39MHZ           38
+#define CLKTYPE_40MHZ           39
+#define CLKTYPE_41MHZ           40
+#define CLKTYPE_42MHZ           41
+#define CLKTYPE_43MHZ           42
+#define CLKTYPE_44MHZ           43
+#define CLKTYPE_45MHZ           44
+#define CLKTYPE_46MHZ           45
+#define CLKTYPE_47MHZ           46
+#define CLKTYPE_48MHZ           47
 
 #define VIDEOFORMATTYPE_NTSC    0
 #define VIDEOFORMATTYPE_PAL     1
@@ -79,7 +125,7 @@ void print_usage(const char *program_name);
 #endif
 
 void YabauseChangeTiming(int freqtype);
-int YabauseInit(yabauseinit_struct *init);
+int YabauseInit(yabauseinit_struct *init, int selected_clock);
 void YabFlushBackups(void);
 void YabauseDeInit(void);
 void YabauseSetDecilineMode(int on);

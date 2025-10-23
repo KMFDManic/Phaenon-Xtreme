@@ -77,7 +77,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "4M_ram", "4MB RAM" },
          { NULL, NULL},
       },
-      "none"
+      "4M_ram"
    },
    {
       "yabause_multitap_port1",
@@ -124,7 +124,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "32", NULL },
          { NULL, NULL},
       },
-      "4"
+      "1"
    },
 #endif
    { NULL, NULL, NULL, NULL, NULL, NULL, {{0}}, NULL },

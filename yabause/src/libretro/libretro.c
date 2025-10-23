@@ -56,6 +56,11 @@ static bool frameskip_enable = false;
 static int addon_cart_type = CART_NONE;
 static int numthreads = 1;
 
+int selected_clock = CLKTYPE_28MHZ;
+
+int frameskip_max = 3;
+int frameskip_turboboost = 6;
+
 static bool libretro_supports_bitmasks = false;
 static int16_t libretro_input_bitmask[12] = {-1,};
 static int pad_type[12] = {RETRO_DEVICE_NONE,};
@@ -546,7 +551,7 @@ static struct retro_system_av_info g_av_info;
 void retro_get_system_info(struct retro_system_info *info)
 {
    memset(info, 0, sizeof(*info));
-   info->library_name     = "Yabause";
+   info->library_name     = "Yabause Xtreme";
 #ifndef GIT_VERSION
 #define GIT_VERSION ""
 #endif
@@ -682,6 +687,71 @@ static void check_variables(void)
          EnableAutoFrameSkip();
          frameskip_enable = true;
       }
+   }
+
+   var.key = "frameskip_max";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      frameskip_max = atoi(var.value);
+   else
+      frameskip_max = atoi(FRAMESKIP_MAX_DEFAULT);
+
+   var.key = "frameskip_turboboost";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      frameskip_turboboost = atoi(var.value);
+   else
+      frameskip_turboboost = atoi(FRAMESKIP_TURBOBOOST_DEFAULT);
+
+   var.key = "yabause_sh2_clock_speed";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "1") == 0) selected_clock = CLKTYPE_1MHZ;
+      else if (strcmp(var.value, "2") == 0) selected_clock = CLKTYPE_2MHZ;
+      else if (strcmp(var.value, "3") == 0) selected_clock = CLKTYPE_3MHZ;
+      else if (strcmp(var.value, "4") == 0) selected_clock = CLKTYPE_4MHZ;
+      else if (strcmp(var.value, "5") == 0) selected_clock = CLKTYPE_5MHZ;
+      else if (strcmp(var.value, "6") == 0) selected_clock = CLKTYPE_6MHZ;
+      else if (strcmp(var.value, "7") == 0) selected_clock = CLKTYPE_7MHZ;
+      else if (strcmp(var.value, "8") == 0) selected_clock = CLKTYPE_8MHZ;
+      else if (strcmp(var.value, "9") == 0) selected_clock = CLKTYPE_9MHZ;
+      else if (strcmp(var.value, "10") == 0) selected_clock = CLKTYPE_10MHZ;
+      else if (strcmp(var.value, "11") == 0) selected_clock = CLKTYPE_11MHZ;
+      else if (strcmp(var.value, "12") == 0) selected_clock = CLKTYPE_12MHZ;
+      else if (strcmp(var.value, "13") == 0) selected_clock = CLKTYPE_13MHZ;
+      else if (strcmp(var.value, "14") == 0) selected_clock = CLKTYPE_14MHZ;
+      else if (strcmp(var.value, "15") == 0) selected_clock = CLKTYPE_15MHZ;
+      else if (strcmp(var.value, "16") == 0) selected_clock = CLKTYPE_16MHZ;
+      else if (strcmp(var.value, "17") == 0) selected_clock = CLKTYPE_17MHZ;
+      else if (strcmp(var.value, "18") == 0) selected_clock = CLKTYPE_18MHZ;
+      else if (strcmp(var.value, "19") == 0) selected_clock = CLKTYPE_19MHZ;
+      else if (strcmp(var.value, "20") == 0) selected_clock = CLKTYPE_20MHZ;
+      else if (strcmp(var.value, "21") == 0) selected_clock = CLKTYPE_21MHZ;
+      else if (strcmp(var.value, "22") == 0) selected_clock = CLKTYPE_22MHZ;
+      else if (strcmp(var.value, "23") == 0) selected_clock = CLKTYPE_23MHZ;
+      else if (strcmp(var.value, "24") == 0) selected_clock = CLKTYPE_24MHZ;
+      else if (strcmp(var.value, "25") == 0) selected_clock = CLKTYPE_25MHZ;
+      else if (strcmp(var.value, "26") == 0) selected_clock = CLKTYPE_26MHZ;
+      else if (strcmp(var.value, "27") == 0) selected_clock = CLKTYPE_27MHZ;
+      else if (strcmp(var.value, "28") == 0) selected_clock = CLKTYPE_28MHZ;
+      else if (strcmp(var.value, "29") == 0) selected_clock = CLKTYPE_29MHZ;
+      else if (strcmp(var.value, "30") == 0) selected_clock = CLKTYPE_30MHZ;
+      else if (strcmp(var.value, "31") == 0) selected_clock = CLKTYPE_31MHZ;
+      else if (strcmp(var.value, "32") == 0) selected_clock = CLKTYPE_32MHZ;
+      else if (strcmp(var.value, "33") == 0) selected_clock = CLKTYPE_33MHZ;
+      else if (strcmp(var.value, "34") == 0) selected_clock = CLKTYPE_34MHZ;
+      else if (strcmp(var.value, "35") == 0) selected_clock = CLKTYPE_35MHZ;
+      else if (strcmp(var.value, "36") == 0) selected_clock = CLKTYPE_36MHZ;
+      else if (strcmp(var.value, "37") == 0) selected_clock = CLKTYPE_37MHZ;
+      else if (strcmp(var.value, "38") == 0) selected_clock = CLKTYPE_38MHZ;
+   }
+
+   if (yabsys.CurSH2FreqType != selected_clock) {
+       yabsys.CurSH2FreqType = selected_clock;
+       YabauseChangeTiming(selected_clock);
    }
 
    var.key = "yabause_force_hle_bios";
@@ -1128,7 +1198,10 @@ bool retro_load_game(const struct retro_game_info *info)
 #endif
 
    log_cb(RETRO_LOG_DEBUG, "Starting emulation\n");
-   ret = YabauseInit(&yinit);
+   ret = YabauseInit(&yinit, selected_clock);
+   if (ret == 0)
+      YabauseChangeTiming(selected_clock); // <-- Apply selected clock here
+
    OSDChangeCore(OSDCORE_DUMMY);
    YabauseSetDecilineMode(1);
 
@@ -1191,7 +1264,7 @@ void retro_deinit(void)
 void retro_reset(void)
 {
    YabauseResetButton();
-   YabauseInit(&yinit);
+   YabauseInit(&yinit, selected_clock);
    YabauseSetDecilineMode(1);
 }
 

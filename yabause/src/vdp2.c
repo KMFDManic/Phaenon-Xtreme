@@ -49,6 +49,9 @@ u64 lastticks=0;
 static int fps;
 int vdp2_is_odd_frame = 0;
 
+extern int frameskip_max;
+extern int frameskip_turboboost;
+
 //////////////////////////////////////////////////////////////////////////////
 
 u8 FASTCALL Vdp2RamReadByte(u32 addr) {
@@ -427,12 +430,12 @@ void Vdp2VBlankOUT(void) {
 
    Vdp2Regs->TVSTAT = ((Vdp2Regs->TVSTAT & ~0x0008) & ~0x0002) | (vdp2_is_odd_frame << 1);
 
-   if (skipnextframe && (! saved))
+   if (skipnextframe && (!saved))
    {
       saved = VIDCore;
       VIDCore = &VIDDummy;
    }
-   else if (saved && (! skipnextframe))
+   else if (saved && (!skipnextframe))
    {
       VIDCore = saved;
       saved = NULL;
@@ -451,13 +454,13 @@ void Vdp2VBlankOUT(void) {
    }
 
    FPSDisplay();
+
    if ((Vdp1Regs->FBCR & 2) && (Vdp1Regs->TVMR & 8))
       Vdp1External.manualerase = 1;
 
    if (!skipnextframe)
    {
       framesskipped = 0;
-
       if (framestoskip > 0)
          skipnextframe = 1;
    }
@@ -473,15 +476,8 @@ void Vdp2VBlankOUT(void) {
       framesskipped++;
    }
 
-   // Do Frame Skip/Frame Limiting/Speed Throttling here
-   if (throttlespeed)
-   {
-      // Should really depend on how fast we're rendering the frames
-      if (framestoskip < 1)
-         framestoskip = 6;
-   }
-   //when in frame advance, disable frame skipping
-   else if (autoframeskipenab && FrameAdvanceVariable == 0)
+   // Frame skip logic only — no throttle
+   if (autoframeskipenab && FrameAdvanceVariable == 0)
    {
       framecount++;
 
@@ -492,42 +488,29 @@ void Vdp2VBlankOUT(void) {
       }
 
       curticks = YabauseGetTicks();
-      diffticks = curticks-lastticks;
+      diffticks = curticks - lastticks;
 
-      if ((onesecondticks+diffticks) > ((yabsys.OneFrameTime * (u64)framecount) + (yabsys.OneFrameTime / 2)) &&
-          framesskipped < 9)
-      {
-         // Skip the next frame
-         skipnextframe = 1;
-
-         // How many frames should we skip?
-         framestoskip = 1;
-      }
-      else if ((onesecondticks+diffticks) < ((yabsys.OneFrameTime * (u64)framecount) - (yabsys.OneFrameTime / 2)))
-      {
-         // Check to see if we need to limit speed at all
-         for (;;)
-         {
-            curticks = YabauseGetTicks();
-            diffticks = curticks-lastticks;
-            if ((onesecondticks+diffticks) >= (yabsys.OneFrameTime * (u64)framecount))
-               break;
-         }
-      }
+if ((onesecondticks + diffticks) > ((yabsys.OneFrameTime * (u64)framecount) + (yabsys.OneFrameTime / frameskip_turboboost)) &&
+    framesskipped < frameskip_max)
+{
+   skipnextframe = 1;
+   framestoskip = 1; // Can change via core option
+}
 
       onesecondticks += diffticks;
       lastticks = curticks;
    }
 
    ScuSendVBlankOUT();
-   
-   if (Vdp2Regs->EXTEN & 0x200) // Should be revised for accuracy(should occur only occur on the line it happens at, etc.)
+
+   if (Vdp2Regs->EXTEN & 0x200)
    {
-      // Only Latch if EXLTEN is enabled
       if (SmpcRegs->EXLE & 0x1)
-         Vdp2SendExternalLatch((PORTDATA1.data[3]<<8)|PORTDATA1.data[4], (PORTDATA1.data[5]<<8)|PORTDATA1.data[6]);
-	}
+         Vdp2SendExternalLatch((PORTDATA1.data[3]<<8) | PORTDATA1.data[4],
+                               (PORTDATA1.data[5]<<8) | PORTDATA1.data[6]);
+   }
 }
+
 
 //////////////////////////////////////////////////////////////////////////////
 

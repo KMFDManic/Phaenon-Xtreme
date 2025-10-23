@@ -1,3 +1,19 @@
+#include <stdint.h>
+
+
+/* --- Preamp helpers (uses stdint.h types) --- */
+static inline int16_t sat16(int32_t x)
+{
+   if (x > 32767) return 32767;
+   if (x < -32768) return -32768;
+   return (int16_t)x;
+}
+
+/* Q12 gain: 4096 = +0 dB, 8192 ≈ +6 dB, 16384 ≈ +12 dB, 32768 ≈ +18 dB */
+#ifndef PHAENON_PREAMP_Q12
+#define PHAENON_PREAMP_Q12 32500 /* ≈ +18 dB */
+#endif
+
 #ifndef _MSC_VER
 #include <stdbool.h>
 #endif
@@ -414,7 +430,24 @@ static void sdlConvert32uto16s(int32_t *srcL, int32_t *srcR, int16_t *dst, size_
 static void SNDLIBRETROUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples)
 {
    sdlConvert32uto16s((int32_t*)leftchanbuffer, (int32_t*)rightchanbuffer, sound_buf, num_samples);
-   audio_batch_cb(sound_buf, num_samples);
+   
+/* --- Phaenon preamp (+18 dB) with gentle soft limiter --- */
+{
+   int count = (int)num_samples * 2; /* stereo interleaved */
+   for (int i = 0; i < count; i++)
+   {
+      int32_t s = (int32_t)sound_buf[i] * PHAENON_PREAMP_Q12; /* Q12 gain */
+      s >>= 12;
+      /* Soft clip via cubic approximation: y = x * (1 - x^2/3) */
+      float x = (float)s / 32768.0f;
+      if (x > 1.0f) x = 1.0f;
+      if (x < -1.0f) x = -1.0f;
+      float y = x * (1.0f - 0.33333333f * x * x);
+      int32_t out = (int32_t)(y * 32767.0f);
+      sound_buf[i] = (out > 32767 ? 32767 : (out < -32768 ? -32768 : (int16_t)out));
+   }
+}
+audio_batch_cb(sound_buf, num_samples);
 
    audio_size -= num_samples;
 }
@@ -743,6 +776,11 @@ void check_variables(void)
       else if (strcmp(var.value, "47") == 0) selected_clock = CLKTYPE_47MHZ;
       else if (strcmp(var.value, "48") == 0) selected_clock = CLKTYPE_48MHZ;
    }
+   /* Apply on the fly without restart */
+   if (yabsys.CurSH2FreqType != selected_clock) {
+      yabsys.CurSH2FreqType = selected_clock;
+      YabauseChangeTiming(selected_clock);
+   }   
 
    var.key = "yabasanshiro_rbg_resolution_mode";
    var.value = NULL;

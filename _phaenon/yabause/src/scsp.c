@@ -89,6 +89,10 @@
 #include <math.h>
 #include <limits.h>
 
+#ifndef PHAENON_SCSP_CENTER_COMP
+#define PHAENON_SCSP_CENTER_COMP 1
+#endif
+
 #ifndef PHAENON_SCSP_MISTER_DIEHARD
 #define PHAENON_SCSP_MISTER_DIEHARD 1
 #endif
@@ -795,8 +799,9 @@ void op5(struct Slot * slot)
 
       #if PHAENON_SCSP_MISTER_DIEHARD
    lfo_add = 0; /* MiSTer DH fix: reset ALFO at OP5 */
-#endif
+#else
    lfo_add = (((alfo_val + 1)) >> (7 - slot->regs.alfos)) << 1;
+#endif
       sample = apply_volume(slot->regs.tl, slot->state.attenuation + lfo_add, slot->state.output);
       slot->state.output = sample;
    }
@@ -925,7 +930,10 @@ void keyon(struct Slot * slot)
       slot->state.sample_offset = 0;
       slot->state.envelope_steps_taken = 0;
 
-      if ( !slot->regs.pcm8b && (slot->regs.sa&0x01) ) {
+            /* Reset LFO phase at key-on for stable starts */
+      slot->state.lfo_counter = 0;
+      slot->state.lfo_pos = 0;
+if ( !slot->regs.pcm8b && (slot->regs.sa&0x01) ) {
         slot->regs.sa &= 0xFFFFFE ;
       }
 
@@ -1477,7 +1485,18 @@ void generate_sample(struct Scsp * s, int rbp, int rbl, s16 * out_l, s16* out_r,
 
          get_panning(s->slots[last_step].regs.dipan, &pan_val_l, &pan_val_r);
 
-         outl32 = outl32 + ((disdl_applied >> pan_val_l) >> 1);
+         
+#if PHAENON_SCSP_CENTER_COMP
+    /* ~+3 dB center compensation (MiSTer-style): boost when pan is centered (0x08) */
+    if (s->slots[last_step].regs.dipan == 0x08) {
+        int tmp = (int)disdl_applied;
+        tmp = (tmp * 181) >> 7; /* 181/128 ≈ 1.414 (+3.0 dB) */
+        if (tmp > 32767) tmp = 32767;
+        if (tmp < -32768) tmp = -32768;
+        disdl_applied = (s16)tmp;
+    }
+#endif
+outl32 = outl32 + ((disdl_applied >> pan_val_l) >> 1);
          outr32 = outr32 + ((disdl_applied >> pan_val_r) >> 1);
          scsp_dsp.mixs[s->slots[last_step].regs.isel] += mixs_input << 4;
       }

@@ -1,4 +1,8 @@
 /*
+#ifndef PHAENON_SCSP_NO_POSTPAN_HALF
+#define PHAENON_SCSP_NO_POSTPAN_HALF 1
+#endif
+
  * Copyright 2004 Stephane Dallongeville
  * Copyright 2004-2007 Theo Berkau
  * Copyright 2006 Guillaume Duhamel
@@ -1496,8 +1500,16 @@ void generate_sample(struct Scsp * s, int rbp, int rbl, s16 * out_l, s16* out_r,
         disdl_applied = (s16)tmp;
     }
 #endif
-outl32 = outl32 + ((disdl_applied >> pan_val_l) >> 1);
+#if PHAENON_SCSP_NO_POSTPAN_HALF
+         outl32 = outl32 + (disdl_applied >> pan_val_l);
+#else
+         outl32 = outl32 + ((disdl_applied >> pan_val_l) >> 1);
+#endif
+         #if PHAENON_SCSP_NO_POSTPAN_HALF
+         outr32 = outr32 + (disdl_applied >> pan_val_r);
+#else
          outr32 = outr32 + ((disdl_applied >> pan_val_r) >> 1);
+#endif
          scsp_dsp.mixs[s->slots[last_step].regs.isel] += mixs_input << 4;
       }
    }

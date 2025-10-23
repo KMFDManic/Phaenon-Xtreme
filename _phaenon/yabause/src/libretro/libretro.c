@@ -1,4 +1,46 @@
 #include <stdint.h>
+#include <string.h>
+
+/* ---- Phaenon: Audio Gain (preamp) ---- */
+static int g_preamp_q15 = 32768; /* 1.0 in Q15 */
+static int phaenon_gain_db_to_q15(const char *db)
+{
+   if (!db) return 32768;
+   /* Negative dB (attenuation) */
+   if (strcmp(db, "-12 dB") == 0)  return (int)(32768 * 0.25f);
+   if (strcmp(db, "-9 dB")  == 0)  return (int)(32768 * 0.3536f);
+   if (strcmp(db, "-6 dB")  == 0)  return (int)(32768 * 0.5f);
+   if (strcmp(db, "-3 dB")  == 0)  return (int)(32768 * 0.7071f);
+   /* Unity */
+   if (strcmp(db, "0 dB")   == 0)  return 32768;
+   /* Positive dB (boost) */
+   if (strcmp(db, "+3 dB")  == 0)  return (int)(32768 * 1.4142f);
+   if (strcmp(db, "+6 dB")  == 0)  return (int)(32768 * 2.0f);
+   if (strcmp(db, "+9 dB")  == 0)  return (int)(32768 * 2.8284f);
+   if (strcmp(db, "+12 dB") == 0)  return (int)(32768 * 4.0f);
+   if (strcmp(db, "+15 dB") == 0)  return (int)(32768 * 5.6234f);
+   if (strcmp(db, "+18 dB") == 0)  return (int)(32768 * 8.0f);
+   if (strcmp(db, "+21 dB") == 0)  return (int)(32768 * 11.3137f);
+   if (strcmp(db, "+24 dB") == 0)  return (int)(32768 * 16.0f);
+   return 32768;
+}
+static inline int16_t phaenon_mul_q15_clip(int16_t s, int q15)
+{
+   int v = (int)s * q15;
+   v >>= 15;
+   if (v > 32767) v = 32767;
+   if (v < -32768) v = -32768;
+   return (int16_t)v;
+}
+static void phaenon_apply_preamp(int16_t *buf, size_t frames)
+{
+   if (!buf) return;
+   if (g_preamp_q15 == 32768) return; /* unity */
+   size_t n = frames * 2; /* stereo interleaved */
+   for (size_t i = 0; i < n; ++i)
+      buf[i] = phaenon_mul_q15_clip(buf[i], g_preamp_q15);
+}
+/* -------------------------------------- */
 
 
 /* --- Preamp helpers (uses stdint.h types) --- */
@@ -114,6 +156,7 @@ extern struct retro_hw_render_callback hw_render;
 void retro_set_environment(retro_environment_t cb)
 {
    static const struct retro_variable vars[] = {
+      { "phaenon_audio_gain_db", "Audio Gain (preamp); -12 dB|-9 dB|-6 dB|-3 dB|0 dB|+3 dB|+6 dB|+9 dB|+12 dB|+15 dB|+18 dB|+21 dB|+24 dB" },
       { "yabasanshiro_force_hle_bios", "Force HLE BIOS (restart, deprecated, debug only); enabled|disabled" },
       { "yabasanshiro_frameskip", "Auto-frameskip (Automatic); enabled|disabled" },
       { "yabasanshiro_sh2_clock_speed", "SH2 Clock Speed (restart); 18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17" },
@@ -447,7 +490,14 @@ static void SNDLIBRETROUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u3
       sound_buf[i] = (out > 32767 ? 32767 : (out < -32768 ? -32768 : (int16_t)out));
    }
 }
-audio_batch_cb(sound_buf, num_samples);
+{
+      struct retro_variable var = {0};
+      var.key = "phaenon_audio_gain_db";
+      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+         g_preamp_q15 = phaenon_gain_db_to_q15(var.value);
+   }
+   phaenon_apply_preamp(sound_buf, num_samples);
+   audio_batch_cb(sound_buf, num_samples);
 
    audio_size -= num_samples;
 }
@@ -1072,7 +1122,14 @@ bool retro_load_game_common()
 
 bool retro_load_game(const struct retro_game_info *info)
 {
-   if (!info)
+   
+   {
+      struct retro_variable var = {0};
+      var.key = "phaenon_audio_gain_db";
+      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+         g_preamp_q15 = phaenon_gain_db_to_q15(var.value);
+   }
+if (!info)
       return false;
 
    check_variables();

@@ -89,6 +89,10 @@
 #include <math.h>
 #include <limits.h>
 
+#ifndef PHAENON_SCSP_MISTER_DIEHARD
+#define PHAENON_SCSP_MISTER_DIEHARD 1
+#endif
+
 #include "c68k/c68k.h"
 #include "cs2.h"
 #include "debug.h"
@@ -789,7 +793,10 @@ void op5(struct Slot * slot)
       else if (slot->regs.alfows == 3)
          alfo_val = alfo.noise_table[slot->state.lfo_pos];
 
-      lfo_add = (((alfo_val + 1)) >> (7 - slot->regs.alfos)) << 1;
+      #if PHAENON_SCSP_MISTER_DIEHARD
+   lfo_add = 0; /* MiSTer DH fix: reset ALFO at OP5 */
+#endif
+   lfo_add = (((alfo_val + 1)) >> (7 - slot->regs.alfos)) << 1;
       sample = apply_volume(slot->regs.tl, slot->state.attenuation + lfo_add, slot->state.output);
       slot->state.output = sample;
    }

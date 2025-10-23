@@ -173,18 +173,34 @@ void ScspDspExec(ScspDsp* dsp, int addr, u8 * sound_ram)
     dsp->y_reg = INPUTS & 0xFFFFFF;
   }
 
-  int ShifterOutput;
+  
+int ShifterOutput;
 
-  ShifterOutput = (u32)sign_x_to_s32(26, dsp->shift_reg) << (inst.part.shift0 ^ inst.part.shift1);
+/* MiSTer-style saturating shifter port: compute TEMP from 26-bit shift_reg */
+{
+    int shift = (inst.part.shift0 ^ inst.part.shift1) ? 1 : 0;
+    /* sign-extend 26-bit to 32-bit */
+    int32_t a = sign_x_to_s32(26, dsp->shift_reg);
+    /* apply optional <<1 */
+    int32_t a_shift = shift ? (a << 1) : a;
+    /* keep lower 26 bits for overflow inspection */
+    uint32_t TEMP = (uint32_t)a_shift & 0x03FFFFFFu;
 
-  if (!inst.part.shift1)
-  {
-    if(ShifterOutput > 0x7FFFFF)
-      ShifterOutput = 0x7FFFFF;
-    else if(ShifterOutput < -0x800000)
-      ShifterOutput = 0x800000;
-  }
-  ShifterOutput &= 0xFFFFFF;
+    uint32_t sign = (TEMP >> 25) & 1u;       /* bit 25 */
+    uint32_t hi   = (TEMP >> 23) & 0x3u;     /* bits 24:23 */
+
+    int32_t RES24;
+    if (!inst.part.shift1 && !sign && hi != 0x0)
+        RES24 = 0x007FFFFF;                  /* +0x7FFFFF */
+    else if (!inst.part.shift1 && sign && hi != 0x3)
+        RES24 = (int32_t)0xFF800000;         /* -0x800000 (sign-extended) */
+    else
+        RES24 = (TEMP & 0x00800000) ? (int32_t)(TEMP | 0xFF000000u)
+                                    : (int32_t)(TEMP & 0x00FFFFFFu);
+
+    ShifterOutput = RES24 & 0xFFFFFF;
+}
+
 
   if (inst.part.ewt)
     dsp->efreg[inst.part.ewa] = (ShifterOutput >> 8);

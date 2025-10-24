@@ -7,23 +7,29 @@ static int phaenon_gain_db_to_q15(const char *db)
 {
    if (!db) return 32768;
    /* Attenuation */
-   if (!strcmp(db, "-12 dB")) return 8192;
-   if (!strcmp(db, "-9 dB"))  return 11587;
-   if (!strcmp(db, "-6 dB"))  return 16384;
-   if (!strcmp(db, "-3 dB"))  return 23170;
+   if (!strcmp(db, "-12 dB")) return 8192;     /* 0.25x */
+   if (!strcmp(db, "-9 dB"))  return 11587;    /* 0.3536x */
+   if (!strcmp(db, "-6 dB"))  return 16384;    /* 0.5x */
+   if (!strcmp(db, "-3 dB"))  return 23170;    /* 0.7071x */
    /* Unity */
-   if (!strcmp(db, "0 dB"))   return 32768;
+   if (!strcmp(db, "0 dB"))   return 32768;    /* 1.0x */
    /* Boost */
-   if (!strcmp(db, "+3 dB"))  return 46341;
-   if (!strcmp(db, "+6 dB"))  return 65536;
-   if (!strcmp(db, "+9 dB"))  return 92682;
-   if (!strcmp(db, "+12 dB")) return 131072;
-   if (!strcmp(db, "+15 dB")) return 184268;
-   if (!strcmp(db, "+18 dB")) return 262144;
-   if (!strcmp(db, "+21 dB")) return 370728;
-   if (!strcmp(db, "+24 dB")) return 524288;
-   if (!strcmp(db, "+27 dB")) return 733584;
-   if (!strcmp(db, "+30 dB")) return 1036215;
+   if (!strcmp(db, "+3 dB"))  return 46341;    /* 1.4142x */
+   if (!strcmp(db, "+6 dB"))  return 65536;    /* 2.0x */
+   if (!strcmp(db, "+9 dB"))  return 92682;    /* 2.8284x */
+   if (!strcmp(db, "+12 dB")) return 131072;   /* 4.0x */
+   if (!strcmp(db, "+15 dB")) return 184268;   /* 5.6234x */
+   if (!strcmp(db, "+18 dB")) return 262144;   /* 8.0x */
+   if (!strcmp(db, "+21 dB")) return 370728;   /* 11.3137x */
+   if (!strcmp(db, "+24 dB")) return 524288;   /* 16.0x */
+   if (!strcmp(db, "+27 dB")) return 733584;   /* 22.3872x */
+   if (!strcmp(db, "+30 dB")) return 1036215;  /* 31.6228x */
+   if (!strcmp(db, "+33 dB")) return 1464472;  /* 44.6684x */
+   if (!strcmp(db, "+36 dB")) return 2067596;  /* 63.0957x */
+   if (!strcmp(db, "+42 dB")) return 4126933;  /* 125.8925x */
+   if (!strcmp(db, "+48 dB")) return 8231220;  /* 251.1886x */
+   if (!strcmp(db, "+54 dB")) return 16461056; /* 501.1872x */
+   if (!strcmp(db, "+60 dB")) return 32768000; /* 1000x */
    return 32768;
 }
 static inline int16_t phaenon_mul_q15_clip(int16_t s, int q15)
@@ -39,8 +45,21 @@ static void phaenon_apply_preamp(int16_t *buf, size_t frames)
    if (!buf) return;
    if (g_preamp_q15 == 32768) return; /* unity */
    size_t n = frames * 2; /* stereo interleaved */
-   for (size_t i = 0; i < n; ++i)
-      buf[i] = phaenon_mul_q15_clip(buf[i], g_preamp_q15);
+   for (size_t i = 0; i < n; ++i) {
+      long long v = (long long)buf[i] * (long long)g_preamp_q15;
+      v >>= 15;
+      const int T = 29491; /* ~ -3 dBFS knee */
+      if (v > T) {
+         long long excess = v - T;
+         v = T + (excess >> 2);
+         if (v > 32767) v = 32767;
+      } else if (v < -T) {
+         long long excess = (-T) - v;
+         v = -T - (excess >> 2);
+         if (v < -32768) v = -32768;
+      }
+      buf[i] = (int16_t)v;
+   }
 }
 /* -------------------------------------- */
 
@@ -158,10 +177,10 @@ extern struct retro_hw_render_callback hw_render;
 void retro_set_environment(retro_environment_t cb)
 {
    static const struct retro_variable vars[] = {
-      { "phaenon_audio_gain_db", "Audio Gain (preamp); -12 dB|-9 dB|-6 dB|-3 dB|0 dB|+3 dB|+6 dB|+9 dB|+12 dB|+15 dB|+18 dB|+21 dB|+24 dB|+27 dB|+30 dB" },
+      { "phaenon_audio_gain_db", "Audio Gain (preamp); -12 dB|-9 dB|-6 dB|-3 dB|0 dB|+3 dB|+6 dB|+9 dB|+12 dB|+15 dB|+18 dB|+21 dB|+24 dB|+27 dB|+30 dB|+33 dB|+36 dB|+42 dB|+48 dB|+54 dB|+60 dB" },
       { "yabasanshiro_force_hle_bios", "Force HLE BIOS (restart, deprecated, debug only); enabled|disabled" },
       { "yabasanshiro_frameskip", "Auto-frameskip (Automatic); enabled|disabled" },
-      { "yabasanshiro_sh2_clock_speed", "SH2 Clock Speed (restart); 18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17" },
+      { "yabasanshiro_sh2_clock_speed", "SH2 Clock Speed; 18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17" },
       { "yabasanshiro_addon_cart", "Addon Cartridge (restart); 4M_extended_ram|1M_extended_ram" },
       { "yabasanshiro_multitap_port1", "6Player Adaptor on Port 1; disabled|enabled" },
       { "yabasanshiro_multitap_port2", "6Player Adaptor on Port 2; disabled|enabled" },

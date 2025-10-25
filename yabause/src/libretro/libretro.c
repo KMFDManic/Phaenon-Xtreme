@@ -27,6 +27,15 @@
 #include "cs0.h"
 #include "cs2.h"
 
+/* Horizontal crop (left/right) and vertical crop (top/bottom),
+ * both in pixels per side.
+ * Example: g_crop_lr_each_side = 40 means cut 40px off LEFT
+ * and 40px off RIGHT (total width reduced by 80).
+ * g_crop_tb_each_side = 24 means cut 24px off TOP and 24px off BOTTOM.
+ */
+static int g_crop_lr_each_side = 0;
+static int g_crop_tb_each_side = 0;
+
 #include "m68kcore.h"
 #include "vidogl.h"
 #include "vidsoft.h"
@@ -524,21 +533,64 @@ int YuiSetVideoMode(int width, int height, int bpp, int fullscreen)
 
 void YuiSwapBuffers(void)
 {
+   /* We start by asking the video core what size it actually rendered this frame */
    int current_width  = 320;
    int current_height = 240;
 
-   /* Test if VIDCore valid AND NOT the
-    * Dummy Interface (or at least VIDCore->id != 0).
-    * Avoid calling GetGlSize if Dummy/ID = 0 is selected
-    */
    if (VIDCore && VIDCore->id)
       VIDCore->GetGlSize(&current_width, &current_height);
 
-   game_width  = current_width;
-   game_height = current_height;
+   /* Per-side crop chosen by user at runtime via core options */
+   int crop_lr = g_crop_lr_each_side; /* left & right */
+   int crop_tb = g_crop_tb_each_side; /* top & bottom */
+
+   /* Compute the cropped visible dimensions */
+   int cropped_width  = current_width  - (crop_lr * 2);
+   int cropped_height = current_height - (crop_tb * 2);
+
+   /* Safety: If user set crop bigger than the active picture (like 120px on a tiny mode),
+    * don't underflow. Just clamp that axis to "no crop".
+    */
+   if (cropped_width < 1)
+   {
+      crop_lr       = 0;
+      cropped_width = current_width;
+   }
+
+   if (cropped_height < 1)
+   {
+      crop_tb        = 0;
+      cropped_height = current_height;
+   }
+
+   /* Publish the final logical size so the rest of the core/RA knows what we're "showing" */
+   game_width  = cropped_width;
+   game_height = cropped_height;
 
    audio_size = soundlen;
-   video_cb(dispbuffer, game_width, game_height, game_width * 2);
+
+   /* dispbuffer is the full rendered framebuffer for this frame,
+    * row-major, 16bpp. We want to crop:
+    *   - crop_tb rows off the top
+    *   - crop_lr pixels off the left
+    *
+    * So we advance the base pointer by:
+    *   (crop_tb * current_width) pixels to skip those rows,
+    * plus
+    *   crop_lr pixels to skip that many columns.
+    */
+   {
+      const pixel_t *cropped_ptr =
+         dispbuffer + (crop_tb * current_width) + crop_lr;
+
+      /* We still report the original full stride (pitch). RetroArch allows pitch >= visible row size. */
+      video_cb(
+         cropped_ptr,
+         game_width,
+         game_height,
+         current_width * 2 /* bytes per full source row */);
+   }
+
    one_frame_rendered = true;
 }
 
@@ -596,13 +648,43 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 {
    memset(info, 0, sizeof(*info));
 
-   info->timing.fps            = (retro_get_region() == RETRO_REGION_NTSC) ? 60 : 50;
-   info->timing.sample_rate    = 44100;
-   info->geometry.base_width   = game_width;
-   info->geometry.base_height  = game_height;
-   info->geometry.max_width    = 704;
-   info->geometry.max_height   = 512;
-   info->geometry.aspect_ratio = 4.0 / 3.0;
+   /* Match Saturn timing */
+   info->timing.fps         = (retro_get_region() == RETRO_REGION_NTSC) ? 60 : 50;
+   info->timing.sample_rate = 44100;
+
+   {
+      /* These are the "worst case" Saturn bounds your core is advertising.
+       * You were already using 704x512 in this file.
+       */
+      int max_src_width  = 704;
+      int max_src_height = 512;
+
+      /* Apply the same style of crop math we do per-frame, but to the max. */
+      int cropped_max_w = max_src_width  - (g_crop_lr_each_side * 2);
+      int cropped_max_h = max_src_height - (g_crop_tb_each_side * 2);
+
+      if (cropped_max_w < 1)
+         cropped_max_w = 1;
+      if (cropped_max_h < 1)
+         cropped_max_h = 1;
+
+      /* game_width / game_height get updated in YuiSwapBuffers()
+       * AFTER applying both horizontal and vertical crop.
+       * That means they already represent the "real" visible video
+       * we are pushing to RetroArch this frame.
+       */
+      info->geometry.base_width   = game_width;
+      info->geometry.base_height  = game_height;
+      info->geometry.max_width    = cropped_max_w;
+      info->geometry.max_height   = cropped_max_h;
+
+      /* Critical: tell RetroArch the aspect of the cropped region,
+       * not 4:3, so it scales *our* cropped box full-screen instead
+       * of stretching it back out or adding bars.
+       */
+      info->geometry.aspect_ratio =
+         (float)game_width / (float)game_height;
+   }
 }
 
 void retro_set_controller_port_device(unsigned port, unsigned device)
@@ -753,6 +835,59 @@ static void check_variables(void)
        yabsys.CurSH2FreqType = selected_clock;
        YabauseChangeTiming(selected_clock);
    }
+
+/* ---------------------- */
+/* Horizontal crop (L/R)  */
+/* ---------------------- */
+var.key = "yabause_crop_lr_pixels";
+var.value = NULL;
+if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+{
+   int newcrop_lr = 0;
+
+   if (strcmp(var.value, "8px") == 0)    newcrop_lr = 8;
+   else if (strcmp(var.value, "16px") == 0)  newcrop_lr = 16;
+   else if (strcmp(var.value, "24px") == 0)  newcrop_lr = 24;
+   else if (strcmp(var.value, "32px") == 0)  newcrop_lr = 32;
+   else if (strcmp(var.value, "40px") == 0)  newcrop_lr = 40;
+   else if (strcmp(var.value, "48px") == 0)  newcrop_lr = 48;
+   else if (strcmp(var.value, "56px") == 0)  newcrop_lr = 56;
+   else if (strcmp(var.value, "64px") == 0)  newcrop_lr = 64;
+   else if (strcmp(var.value, "80px") == 0)  newcrop_lr = 80;
+   else if (strcmp(var.value, "96px") == 0)  newcrop_lr = 96;
+   else if (strcmp(var.value, "112px") == 0) newcrop_lr = 112;
+   else if (strcmp(var.value, "120px") == 0) newcrop_lr = 120;
+   /* Off/default keeps 0 */
+
+   g_crop_lr_each_side = newcrop_lr;
+}
+
+/* ---------------------- */
+/* Vertical crop (T/B)    */
+/* ---------------------- */
+var.key = "yabause_crop_tb_pixels";
+var.value = NULL;
+if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+{
+   int newcrop_tb = 0;
+
+   if (strcmp(var.value, "8px") == 0)    newcrop_tb = 8;
+   else if (strcmp(var.value, "16px") == 0)  newcrop_tb = 16;
+   else if (strcmp(var.value, "24px") == 0)  newcrop_tb = 24;
+   else if (strcmp(var.value, "32px") == 0)  newcrop_tb = 32;
+   else if (strcmp(var.value, "40px") == 0)  newcrop_tb = 40;
+   else if (strcmp(var.value, "48px") == 0)  newcrop_tb = 48;
+   else if (strcmp(var.value, "56px") == 0)  newcrop_tb = 56;
+   else if (strcmp(var.value, "64px") == 0)  newcrop_tb = 64;
+   else if (strcmp(var.value, "80px") == 0)  newcrop_tb = 80;
+   else if (strcmp(var.value, "96px") == 0)  newcrop_tb = 96;
+   else if (strcmp(var.value, "112px") == 0) newcrop_tb = 112;
+   else if (strcmp(var.value, "120px") == 0) newcrop_tb = 120;
+   /* Off/default keeps 0 */
+
+   g_crop_tb_each_side = newcrop_tb;
+}
+
 
    var.key = "yabause_force_hle_bios";
    var.value = NULL;

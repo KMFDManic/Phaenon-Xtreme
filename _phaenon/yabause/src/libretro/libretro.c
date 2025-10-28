@@ -188,7 +188,7 @@ void retro_set_environment(retro_environment_t cb)
       { "yabasanshiro_sh2coretype", "SH2 Core (restart); dynarec|interpreter" },
 #endif
       { "yabasanshiro_polygon_mode", "Polygon Mode (restart); perspective_correction|gpu_tesselation|cpu_tesselation" },
-      { "yabasanshiro_resolution_mode", "Resolution Mode (restart); original|2x|4x|720p|1080p|4k" },
+      { "yabasanshiro_resolution_mode", "Resolution Mode (restart); original|2x|4x|720p|1080p|4k|XtremeClampLow" },
       { "yabasanshiro_rbg_resolution_mode", "RGB resolution mode; original|2x|720p|1080p|Fit_to_emulation" },
       { "yabasanshiro_rbg_use_compute_shader", "RGB use compute shader for RGB; disabled|enabled" },
       { NULL, NULL },
@@ -662,6 +662,10 @@ void retro_set_resolution()
          current_width = 3840;
          current_height = 2160;
          break;
+      case RES_CLAMP_LOW:
+         current_width  = 320;
+         current_height = 224;
+         break;         
    }
    VIDCore->Resize(0, 0, current_width, current_height, 0, 0);
    retro_reinit_av_info();
@@ -950,6 +954,10 @@ void check_variables(void)
       {
          g_resolution_mode = RES_NATIVE;
       }
+      else if (strcmp(var.value, "XtremeClampLow") == 0)
+      {
+         g_resolution_mode = RES_CLAMP_LOW;
+      }
    }
 
    var.key = "yabasanshiro_polygon_mode";
@@ -1180,6 +1188,10 @@ if (!info)
          max_width = 3840;
          max_height = 2160;
          break;
+      case RES_CLAMP_LOW:
+         max_width  = 320;
+         max_height = 224;
+         break;         
    }
 
    snprintf(full_path, sizeof(full_path), "%s", info->path);

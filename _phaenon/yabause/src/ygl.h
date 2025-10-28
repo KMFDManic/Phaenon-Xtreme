@@ -482,7 +482,8 @@ typedef enum
   RES_2x,
   RES_ORIGINAL,
   RES_720P,
-  RES_1080P
+  RES_1080P,
+  RES_CLAMP_LOW
 } RESOLUTION_MODE;
 
 typedef enum

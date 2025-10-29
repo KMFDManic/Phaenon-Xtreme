@@ -27,6 +27,38 @@
 #include "cs0.h"
 #include "cs2.h"
 
+/* --- Software-path clamp support (minimal, no GL) --- */
+static uint16_t *s_downbuf = NULL;
+static size_t    s_downbuf_sz = 0;
+
+static void ensure_downbuf(int w, int h)
+{
+   size_t need = (size_t)w * (size_t)h * sizeof(uint16_t);
+   if (need != s_downbuf_sz) {
+      free(s_downbuf);
+      s_downbuf = (uint16_t*)malloc(need);
+      s_downbuf_sz = need;
+   }
+}
+
+/* Nearest-neighbor downsample from 16bpp source to 16bpp dest. 
+ * spitch16 is in pixels (not bytes). For our libretro soft path,
+ * spitch16 == source width is typical.
+ */
+static void downsample_nn_16(const uint16_t *src, int sw, int sh, int spitch16,
+                             uint16_t *dst, int dw, int dh)
+{
+   for (int y = 0; y < dh; y++) {
+      int sy = (y * sh) / dh;
+      const uint16_t *srow = src + (size_t)sy * spitch16;
+      uint16_t *drow = dst + (size_t)y * dw;
+      for (int x = 0; x < dw; x++) {
+         int sx = (x * sw) / dw;
+         drow[x] = srow[sx];
+      }
+   }
+}
+
 /* Horizontal crop (left/right) and vertical crop (top/bottom),
  * both in pixels per side.
  * Example: g_crop_lr_each_side = 40 means cut 40px off LEFT
@@ -550,47 +582,68 @@ void YuiSwapBuffers(void)
    int cropped_width  = current_width  - (crop_lr * 2);
    int cropped_height = current_height - (crop_tb * 2);
 
-   /* Safety: If user set crop bigger than the active picture (like 120px on a tiny mode),
-    * don't underflow. Just clamp that axis to "no crop".
-    */
-   if (cropped_width < 1)
-   {
+   if (cropped_width < 1) {
       crop_lr       = 0;
       cropped_width = current_width;
    }
-
-   if (cropped_height < 1)
-   {
+   if (cropped_height < 1) {
       crop_tb        = 0;
       cropped_height = current_height;
    }
 
-   /* Publish the final logical size so the rest of the core/RA knows what we're "showing" */
+   /* Publish the logical size (pre-clamp) */
    game_width  = cropped_width;
    game_height = cropped_height;
+   audio_size  = soundlen;
 
-   audio_size = soundlen;
+   /* Base pointer to cropped region (16bpp) */
+   const pixel_t *cropped_ptr =
+      dispbuffer + (crop_tb * current_width) + crop_lr;
 
-   /* dispbuffer is the full rendered framebuffer for this frame,
-    * row-major, 16bpp. We want to crop:
-    *   - crop_tb rows off the top
-    *   - crop_lr pixels off the left
-    *
-    * So we advance the base pointer by:
-    *   (crop_tb * current_width) pixels to skip those rows,
-    * plus
-    *   crop_lr pixels to skip that many columns.
-    */
-   {
-      const pixel_t *cropped_ptr =
-         dispbuffer + (crop_tb * current_width) + crop_lr;
+   /* ---- INTERNAL RESOLUTION CLAMP / HANDHELD TEST (software path) ---- */
+   int dw = game_width;
+   int dh = game_height;
 
-      /* We still report the original full stride (pitch). RetroArch allows pitch >= visible row size. */
+   if (g_res_clamp_mode == 1) {
+      /* Clamp ≤ 320x240 */
+      if (dw > 320) dw = 320;
+      if (dh > 240) dh = 240;
+   }
+   else if (g_res_clamp_mode == 2) {
+      /* Option A: official 320x224 clamp */
+      if (dw > 320) dw = 320;
+      if (dh > 224) dh = 224;
+
+      /* Option B (temporary handheld test): uncomment to force tiny buffer
+       * dw = 200; dh = 160;
+       */
+   }
+
+   /* Send as-is if no change; otherwise downsample nearest-neighbor */
+   if (dw == game_width && dh == game_height) {
       video_cb(
          cropped_ptr,
          game_width,
          game_height,
          current_width * 2 /* bytes per full source row */);
+   } else {
+      /* Update for RA + any code that reads these */
+      game_width  = dw;
+      game_height = dh;
+
+      ensure_downbuf(dw, dh);
+      downsample_nn_16(
+         (const uint16_t *)cropped_ptr,
+         /* sw,sh */  cropped_width, cropped_height,
+         /* src pitch in pixels */ current_width,
+         /* dst */ s_downbuf,
+         /* dw,dh */ dw, dh);
+
+      video_cb(
+         s_downbuf,
+         dw,
+         dh,
+         dw * 2 /* bytes per row in downsample buffer */);
    }
 
    one_frame_rendered = true;
@@ -831,7 +884,6 @@ static void check_variables(void)
       else if (strcmp(var.value, "36") == 0) selected_clock = CLKTYPE_36MHZ;
       else if (strcmp(var.value, "37") == 0) selected_clock = CLKTYPE_37MHZ;
       else if (strcmp(var.value, "38") == 0) selected_clock = CLKTYPE_38MHZ;
-      else if (strcmp(var.value, "48") == 0) selected_clock = CLKTYPE_48MHZ;      
    }
 
    if (yabsys.CurSH2FreqType != selected_clock) {
@@ -1413,6 +1465,9 @@ size_t retro_get_memory_size(unsigned id)
 void retro_deinit(void)
 {
    libretro_supports_bitmasks = false;
+   free(s_downbuf);
+   s_downbuf = NULL;
+   s_downbuf_sz = 0;
 }
 
 void retro_reset(void)

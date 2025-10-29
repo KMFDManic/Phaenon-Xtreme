@@ -36,6 +36,8 @@
 static int g_crop_lr_each_side = 0;
 static int g_crop_tb_each_side = 0;
 
+int g_res_clamp_mode = 0;
+
 #include "m68kcore.h"
 #include "vidogl.h"
 #include "vidsoft.h"
@@ -829,6 +831,7 @@ static void check_variables(void)
       else if (strcmp(var.value, "36") == 0) selected_clock = CLKTYPE_36MHZ;
       else if (strcmp(var.value, "37") == 0) selected_clock = CLKTYPE_37MHZ;
       else if (strcmp(var.value, "38") == 0) selected_clock = CLKTYPE_38MHZ;
+      else if (strcmp(var.value, "48") == 0) selected_clock = CLKTYPE_48MHZ;      
    }
 
    if (yabsys.CurSH2FreqType != selected_clock) {
@@ -888,6 +891,22 @@ if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    g_crop_tb_each_side = newcrop_tb;
 }
 
+   /* Internal Resolution Clamp */
+   var.key = "yabause_res_clamp";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int new_clamp = 0; /* default: Native */
+
+      if (strcmp(var.value, "Native") == 0)
+         new_clamp = 0;
+      else if (strcmp(var.value, "Clamp 320x240") == 0)
+         new_clamp = 1;
+      else if (strcmp(var.value, "Clamp 320x224") == 0)
+         new_clamp = 2;
+
+      g_res_clamp_mode = new_clamp;
+   }
 
    var.key = "yabause_force_hle_bios";
    var.value = NULL;

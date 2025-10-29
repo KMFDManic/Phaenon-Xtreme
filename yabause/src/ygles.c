@@ -2439,13 +2439,47 @@ void YglSetLineColor(u32 * pbuf, int size){
 }
 
 //////////////////////////////////////////////////////////////////////////////
+void YglChangeResolution(int w, int h)
+{
+   /* We pull the user's clamp choice from libretro.c */
+   extern int g_res_clamp_mode;
 
-void YglChangeResolution(int w, int h) {
+   /* Start with what Saturn actually asked for */
+   int cw = w;
+   int ch = h;
+
+   /* 0 = Native (no clamp)
+    * 1 = Clamp 320x240
+    * 2 = Clamp 320x224
+    */
+   if (g_res_clamp_mode == 1)
+   {
+      /* Clamp to at most 320x240 */
+      if (cw > 320) cw = 320;
+      if (ch > 240) ch = 240;
+   }
+   else if (g_res_clamp_mode == 2)
+   {
+      /* Clamp to at most 320x224 (even cheaper vertically) */
+      if (cw > 320) cw = 320;
+      if (ch > 224) ch = 224;
+   }
+
+   /* Now build the projection using the clamped size */
    YglLoadIdentity(&_Ygl->mtxModelView);
-   YglOrtho(&_Ygl->mtxModelView, 0.0f, (float)w, (float)h, 0.0f, 10.0f, 0.0f);
+   YglOrtho(&_Ygl->mtxModelView,
+            0.0f,
+            (float)cw,
+            (float)ch,
+            0.0f,
+            10.0f,
+            0.0f);
 
-   if( _Ygl->rwidth != w || _Ygl->rheight != h ) {
-       if (_Ygl->smallfbo != 0) {
+   /* If the internal render target size actually changed, blow away cached FBO stuff */
+   if ((_Ygl->rwidth != cw) || (_Ygl->rheight != ch))
+   {
+      if (_Ygl->smallfbo != 0)
+      {
          glDeleteFramebuffers(1, &_Ygl->smallfbo);
          _Ygl->smallfbo = 0;
          glDeleteTextures(1, &_Ygl->smallfbotex);
@@ -2453,12 +2487,11 @@ void YglChangeResolution(int w, int h) {
          glDeleteBuffers(1, &_Ygl->vdp1pixelBufferID);
          _Ygl->vdp1pixelBufferID = 0;
          _Ygl->pFrameBuffer = NULL;
-       }
+      }
    }
 
-   _Ygl->rwidth = w;
-   _Ygl->rheight = h;
-
+   _Ygl->rwidth  = cw;
+   _Ygl->rheight = ch;
 }
 
 //////////////////////////////////////////////////////////////////////////////

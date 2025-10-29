@@ -205,7 +205,22 @@ struct retro_core_option_v2_definition option_defs_us[] = {
    },
    "Off"
    },
+   {
+      "yabause_res_clamp",
+      "Internal Resolution Clamp",
+      "Force the Saturn 3D/VDP output to render into a smaller internal buffer for performance on low-end hardware. Lower = faster.",
+      NULL,
+      NULL,
+      NULL,
       {
+         { "Native",        NULL },
+         { "Clamp 320x240", NULL },
+         { "Clamp 320x224", NULL },
+         { NULL,            NULL },
+   },
+   "Native"
+   },
+   {
       "yabause_force_hle_bios",
       "Force HLE BIOS (Restart Required)",
       NULL,

@@ -772,13 +772,10 @@ void retro_get_system_info(struct retro_system_info *info)
 #define GIT_VERSION ""
 #endif
 #ifdef YABADABADOO_DEV
-   info->library_name     = "Yabadabadoo Dev";
+   info->library_name     = "Yabadabadoo Dev Xtreme";
    info->library_version  = "0.3-dev (Yabause 0.9.15)" GIT_VERSION;
-#elif defined(YABADABADOO_BETA)
-   info->library_name     = "Yabadabadoo Beta";
-   info->library_version  = BETA_VERSION " (Yabause 0.9.15)" GIT_VERSION;
 #else
-   info->library_name     = "Yabadabadoo";
+   info->library_name     = "Yabadabadoo Xtreme";
    info->library_version  = "0.3 (Yabause 0.9.15)" GIT_VERSION;
 #endif
    info->need_fullpath    = true;
@@ -1037,9 +1034,30 @@ static void dev_apply_options(int at_boot)
 }
 #endif
 
+/* Xtreme: -1 = native Saturn clock switching; 1..48 = forced MHz. */
+static int xtreme_sh2_mhz = -1;
+static int xtreme_native_clock = CLKTYPE_26MHZ;
+static void xtreme_apply_sh2_clock(void)
+{
+   int desired = xtreme_sh2_mhz < 0 ? xtreme_native_clock
+                                    : CLKTYPE_XTREME_MHZ(xtreme_sh2_mhz);
+   if (yabsys.CurSH2FreqType != desired)
+      YabauseChangeTiming(desired);
+}
+
 static void check_variables(void)
 {
    struct retro_variable var;
+   var.key = "yabadabadoo_xtreme_sh2_clock";
+   var.value = NULL;
+   xtreme_sh2_mhz = -1;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value &&
+       strcmp(var.value, "auto") != 0)
+   {
+      int mhz = (int)strtol(var.value, NULL, 10);
+      if (mhz >= 1 && mhz <= 48)
+         xtreme_sh2_mhz = mhz;
+   }
    var.key = "yabadabadoo_frameskip";
    var.value = NULL;
 
@@ -2070,6 +2088,8 @@ void retro_run(void)
    }
 
    apply_video_format();
+   /* PAL/NTSC switches and resets may restore native timing. */
+   xtreme_apply_sh2_clock();
    /* only when the rate changes (the option): RetroArch reinitialises its
     * drivers for this, and a state saved with the other timing is switched
     * back to the same one */

@@ -608,78 +608,84 @@ jump_vaddr_r12_master:
 	.global	jump_vaddr_r0_slave
 	.type	jump_vaddr_r0_slave, %function
 jump_vaddr_r0_slave:
-	add	r0, r0, #1
+	eor	r2, r0, r0, lsl #16
 	b	jump_vaddr_slave
 	.size	jump_vaddr_r0_slave, .-jump_vaddr_r0_slave
 	.global	jump_vaddr_r1_slave
 	.type	jump_vaddr_r1_slave, %function
 jump_vaddr_r1_slave:
-	add	r0, r1, #1
+	eor	r2, r1, r1, lsl #16
+	mov	r0, r1
 	b	jump_vaddr_slave
 	.size	jump_vaddr_r1_slave, .-jump_vaddr_r1_slave
 	.global	jump_vaddr_r2_slave
 	.type	jump_vaddr_r2_slave, %function
 jump_vaddr_r2_slave:
-	add	r0, r2, #1
+	mov	r0, r2
+	eor	r2, r2, r2, lsl #16
 	b	jump_vaddr_slave
 	.size	jump_vaddr_r2_slave, .-jump_vaddr_r2_slave
 	.global	jump_vaddr_r3_slave
 	.type	jump_vaddr_r3_slave, %function
 jump_vaddr_r3_slave:
-	add	r0, r3, #1
+	eor	r2, r3, r3, lsl #16
+	mov	r0, r3
 	b	jump_vaddr_slave
 	.size	jump_vaddr_r3_slave, .-jump_vaddr_r3_slave
 	.global	jump_vaddr_r4_slave
 	.type	jump_vaddr_r4_slave, %function
 jump_vaddr_r4_slave:
-	add	r0, r4, #1
+	eor	r2, r4, r4, lsl #16
+	mov	r0, r4
 	b	jump_vaddr_slave
 	.size	jump_vaddr_r4_slave, .-jump_vaddr_r4_slave
 	.global	jump_vaddr_r5_slave
 	.type	jump_vaddr_r5_slave, %function
 jump_vaddr_r5_slave:
-	add	r0, r5, #1
+	eor	r2, r5, r5, lsl #16
+	mov	r0, r5
 	b	jump_vaddr_slave
 	.size	jump_vaddr_r5_slave, .-jump_vaddr_r5_slave
 	.global	jump_vaddr_r6_slave
 	.type	jump_vaddr_r6_slave, %function
 jump_vaddr_r6_slave:
-	add	r0, r6, #1
+	eor	r2, r6, r6, lsl #16
+	mov	r0, r6
 	b	jump_vaddr_slave
 	.size	jump_vaddr_r6_slave, .-jump_vaddr_r6_slave
 	.global	jump_vaddr_r7_slave
 	.type	jump_vaddr_r7_slave, %function
 jump_vaddr_r7_slave:
-	add	r0, r7, #1
+	eor	r2, r7, r7, lsl #16
+	mov	r0, r7
 	b	jump_vaddr_slave
 	.size	jump_vaddr_r7_slave, .-jump_vaddr_r7_slave
 	.global	jump_vaddr_r8_slave
 	.type	jump_vaddr_r8_slave, %function
 jump_vaddr_r8_slave:
-	add	r0, r8, #1
+	eor	r2, r8, r8, lsl #16
+	mov	r0, r8
 	b	jump_vaddr_slave
 	.size	jump_vaddr_r8_slave, .-jump_vaddr_r8_slave
 	.global	jump_vaddr_r9_slave
 	.type	jump_vaddr_r9_slave, %function
 jump_vaddr_r9_slave:
-	add	r0, r9, #1
+	eor	r2, r9, r9, lsl #16
+	mov	r0, r9
 	b	jump_vaddr_slave
 	.size	jump_vaddr_r9_slave, .-jump_vaddr_r9_slave
 	.global	jump_vaddr_r12_slave
 	.type	jump_vaddr_r12_slave, %function
 jump_vaddr_r12_slave:
-	add	r0, r12, #1
+	eor	r2, r12, r12, lsl #16
+	mov	r0, r12
 	b	jump_vaddr_slave
 	.size	jump_vaddr_r12_slave, .-jump_vaddr_r12_slave
 	.global	jump_vaddr_slave
 	.type	jump_vaddr_slave, %function
 jump_vaddr_slave:
-	/* r0 = the slave's key, pc + 1 (pc is even). Hash the key itself, as the
-	   master path and the C side do (ht_index() in sh2_dynarec.c, also
-	   dyna_linker below): adding 0x10000 to the master's hash instead gave
-	   another bin whenever address bit 16 was set, so those lookups always
-	   missed and walked jump_in. Falls through into jump_vaddr. */
-	eor	r2, r0, r0, lsl #16
+	add	r2, r2, #65536
+	add	r0, r0, #1
 	.size	jump_vaddr_slave, .-jump_vaddr_slave
 	.global	jump_vaddr
 	.type	jump_vaddr, %function

@@ -68,6 +68,8 @@ typedef struct
 
 #define CLKTYPE_26MHZ           0
 #define CLKTYPE_28MHZ           1
+/* Xtreme: forced MHz values use 100 + MHz; native modes remain unchanged. */
+#define CLKTYPE_XTREME_MHZ(mhz) (100 + (mhz))
 
 #define VIDEOFORMATTYPE_NTSC    0
 #define VIDEOFORMATTYPE_PAL     1

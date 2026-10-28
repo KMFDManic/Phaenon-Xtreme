@@ -142,7 +142,11 @@ void YabauseChangeTiming(int freqtype) {
 
    const double freq_base = yabsys.IsPal ? 28437500.0
       : (39375000.0 / 11.0) * 8.0;  // i.e. 8 * 3.579545... = 28.636363... MHz
-   const double freq_mult = (freqtype == CLKTYPE_26MHZ) ? 15.0/16.0 : 1.0;
+   /* Xtreme: leave native 26/28 MHz timing untouched; forced settings
+    * are expressed relative to the actual NTSC/PAL 28 MHz-mode oscillator. */
+   const double freq_mult = (freqtype >= 101 && freqtype <= 148)
+      ? ((double)(freqtype - 100) * 1000000.0 / freq_base)
+      : ((freqtype == CLKTYPE_26MHZ) ? 15.0/16.0 : 1.0);
    const double freq_shifted = (freq_base * freq_mult) * (1 << YABSYS_TIMING_BITS);
    const double usec_shifted = 1.0e6 * (1 << YABSYS_TIMING_BITS);
    const double deciline_time = yabsys.IsPal ? 1.0 /  50        / 313 / 10

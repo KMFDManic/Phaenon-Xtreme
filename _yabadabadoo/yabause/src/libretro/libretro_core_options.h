@@ -346,7 +346,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "line",     "Scanline" },
          { NULL, NULL },
       },
-      "line"
+      "deciline"
    },
 #ifdef HAVE_THREADS
    {

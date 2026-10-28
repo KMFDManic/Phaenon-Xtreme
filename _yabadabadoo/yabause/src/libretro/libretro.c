@@ -617,9 +617,25 @@ static void sdlConvert32uto16s(int32_t *srcL, int32_t *srcR, int16_t *dst, size_
    }
 }
 
+static int xtreme_gain_q15 = 32768;
+static void xtreme_audio_gain(int16_t *buf, size_t frames)
+{
+   if (xtreme_gain_q15 == 32768) return;
+   for (size_t i = 0; i < frames * 2; ++i) {
+      int64_t v = ((int64_t)buf[i] * xtreme_gain_q15) >> 15;
+      const int64_t knee = 29491;
+      if (v > knee) v = knee + ((v - knee) >> 2);
+      if (v < -knee) v = -knee - (((-v) - knee) >> 2);
+      if (v > 32767) v = 32767;
+      if (v < -32768) v = -32768;
+      buf[i] = (int16_t)v;
+   }
+}
+
 static void SNDLIBRETROUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples)
 {
    sdlConvert32uto16s((int32_t*)leftchanbuffer, (int32_t*)rightchanbuffer, sound_buf, num_samples);
+   xtreme_audio_gain((int16_t *)sound_buf, num_samples);
    audio_batch_cb(sound_buf, num_samples);
 
    audio_size -= num_samples;
@@ -1057,6 +1073,16 @@ static void check_variables(void)
       int mhz = (int)strtol(var.value, NULL, 10);
       if (mhz >= 1 && mhz <= 48)
          xtreme_sh2_mhz = mhz;
+   }
+   var.key = "yabadabadoo_xtreme_audio_gain";
+   var.value = NULL;
+   xtreme_gain_q15 = 32768;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value) {
+      int db = (int)strtol(var.value, NULL, 10);
+      /* Fixed-point gain table, avoiding libm and preserving old ARM toolchains. */
+      static const int gain[] = {8192,11587,16384,23170,32768,46341,65536,92682,131072,184268,262144};
+      if (db >= -12 && db <= 18 && db % 3 == 0)
+         xtreme_gain_q15 = gain[(db + 12) / 3];
    }
    var.key = "yabadabadoo_frameskip";
    var.value = NULL;

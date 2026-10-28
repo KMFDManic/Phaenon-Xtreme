@@ -37,6 +37,26 @@ struct retro_core_option_v2_category option_cats_us[] = {
 
 struct retro_core_option_v2_definition option_defs_us[] = {
    {
+      "yabadabadoo_xtreme_audio_gain",
+      "Xtreme Audio Gain (dB)",
+      NULL,
+      "Software preamp; higher settings may distort or clip.",
+      NULL, NULL,
+      {
+         { "-12", NULL },
+         { "-9", NULL },
+         { "-6", NULL },
+         { "-3", NULL },
+         { "0", NULL },
+         { "3", NULL },
+         { "6", NULL },
+         { "9", NULL },
+         { "12", NULL },
+         { "15", NULL },
+         { "18", NULL },
+         { NULL, NULL },
+      },
+   {
       "yabadabadoo_xtreme_sh2_clock",
       "Xtreme SH-2 CPU Clock (MHz)",
       NULL,

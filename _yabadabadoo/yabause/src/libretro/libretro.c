@@ -738,6 +738,21 @@ void YuiSwapBuffersBody(void);
 void YuiSwapBuffers(void) { YAB_PROF_BEGIN(PROF_OUTPUT); YuiSwapBuffersBody(); YAB_PROF_END(PROF_OUTPUT); }
 #define YuiSwapBuffers YuiSwapBuffersBody
 #endif
+/* Cropping only changes the visible output; source framebuffer stride is preserved. */
+static int xtreme_crop_lr = 0;
+static int xtreme_crop_tb = 0;
+static const u16 *xtreme_last_frame = NULL;
+static unsigned xtreme_last_pitch = 320 * sizeof(u16);
+static unsigned xtreme_last_width = 320, xtreme_last_height = 240;
+
+static int xtreme_parse_crop(const char *value)
+{
+   int amount = 0;
+   if (value && strcmp(value, "Off") != 0)
+      amount = (int)strtol(value, NULL, 10);
+   return (amount >= 0 && amount <= 120) ? amount : 0;
+}
+
 void YuiSwapBuffers(void)
 #ifdef YAB_PROFILE
 #undef YuiSwapBuffers
@@ -771,7 +786,18 @@ void YuiSwapBuffers(void)
       }
    }
 #endif
-   video_cb(dispbuffer, game_width, game_height, game_width * 2);
+   {
+      int lr = xtreme_crop_lr, tb = xtreme_crop_tb;
+      if (lr * 2 >= current_width) lr = 0;
+      if (tb * 2 >= current_height) tb = 0;
+      game_width = current_width - lr * 2;
+      game_height = current_height - tb * 2;
+      xtreme_last_pitch = current_width * sizeof(u16);
+      xtreme_last_frame = (const u16 *)dispbuffer + tb * current_width + lr;
+      xtreme_last_width = game_width;
+      xtreme_last_height = game_height;
+      video_cb(xtreme_last_frame, game_width, game_height, xtreme_last_pitch);
+   }
    one_frame_rendered = true;
 }
 
@@ -1064,6 +1090,12 @@ static void xtreme_apply_sh2_clock(void)
 static void check_variables(void)
 {
    struct retro_variable var;
+   var.key = "yabadabadoo_crop_lr_pixels";
+   var.value = NULL;
+   xtreme_crop_lr = (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value) ? xtreme_parse_crop(var.value) : 0;
+   var.key = "yabadabadoo_crop_tb_pixels";
+   var.value = NULL;
+   xtreme_crop_tb = (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value) ? xtreme_parse_crop(var.value) : 0;
    var.key = "yabadabadoo_xtreme_sh2_clock";
    var.value = NULL;
    xtreme_sh2_mhz = -1;
@@ -2178,7 +2210,8 @@ void retro_run(void)
     * frame, which is what dispbuffer holds. A frontend that can't dupe gets
     * that picture again. */
    if(!one_frame_rendered)
-      video_cb(can_dupe ? NULL : dispbuffer, game_width, game_height, game_width * 2);
+      video_cb(can_dupe ? NULL : (xtreme_last_frame ? xtreme_last_frame : (const u16 *)dispbuffer),
+               xtreme_last_width, xtreme_last_height, xtreme_last_pitch);
 #ifdef YABADABADOO_DEV
    /* 2: the picture didn't change, it wasn't drawn again (exact skip) */
    devsession_run_end(one_frame_rendered ? 1 : vdp2_exact_dupes != exact_dupes_before ? 2 : 0,

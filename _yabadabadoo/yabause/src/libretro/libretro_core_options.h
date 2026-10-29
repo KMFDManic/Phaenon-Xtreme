@@ -56,6 +56,8 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "18", NULL },
          { NULL, NULL },
       },
+      "0"
+   },
    {
       "yabadabadoo_xtreme_sh2_clock",
       "Xtreme SH-2 CPU Clock (MHz)",
@@ -115,6 +117,54 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { NULL, NULL },
       },
       "18"
+   },
+   {
+      "yabadabadoo_crop_lr_pixels",
+      "Crop L/R For Speed",
+      NULL,
+      "Crop the left and right edges equally; output-only cropping.",
+      NULL, NULL,
+      {
+         { "Off", NULL },
+         { "8px", NULL },
+         { "16px", NULL },
+         { "24px", NULL },
+         { "32px", NULL },
+         { "40px", NULL },
+         { "48px", NULL },
+         { "56px", NULL },
+         { "64px", NULL },
+         { "80px", NULL },
+         { "96px", NULL },
+         { "112px", NULL },
+         { "120px", NULL },
+         { NULL, NULL },
+      },
+      "Off"
+   },
+   {
+      "yabadabadoo_crop_tb_pixels",
+      "Crop T/B For Speed",
+      NULL,
+      "Crop the top and bottom edges equally; output-only cropping.",
+      NULL, NULL,
+      {
+         { "Off", NULL },
+         { "8px", NULL },
+         { "16px", NULL },
+         { "24px", NULL },
+         { "32px", NULL },
+         { "40px", NULL },
+         { "48px", NULL },
+         { "56px", NULL },
+         { "64px", NULL },
+         { "80px", NULL },
+         { "96px", NULL },
+         { "112px", NULL },
+         { "120px", NULL },
+         { NULL, NULL },
+      },
+      "Off"
    },
    {
       "yabadabadoo_frameskip",
